@@ -136,6 +136,17 @@
   }
   .segment button.on { background: var(--blue); color: #fff; box-shadow: 0 1px 4px rgba(49,130,246,.4); }
 
+  .script-chip {
+    display: none; align-items: center; gap: 8px; margin-top: 10px;
+    background: var(--blue-soft); border-radius: 12px; padding: 8px 12px; font-size: 13px;
+  }
+  .script-chip.on { display: flex; }
+  .script-chip .name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+  .script-chip button {
+    background: none; border: none; color: var(--text-sub); font-weight: 700;
+    cursor: pointer; font-family: inherit; font-size: 13px; flex-shrink: 0;
+  }
+
   .lecture-card { cursor: pointer; }
   .lecture-card .topic { font-size: 16px; font-weight: 800; margin-bottom: 4px; overflow-wrap: anywhere; }
   .lecture-card .meta { font-size: 13px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
@@ -334,8 +345,9 @@ const SKIP_STEP = `스크립트는 교정 없이 그대로 사용해라.
 
 페이지별 정리: 강의안의 각 페이지에 대해 교수님이 스크립트에서 실제로 말한 내용만 정리해라.`;
 
-function buildPrompt(topic, correct) {
-  return `강의 주제는 "${topic}"이다. 첨부한 강의안 PDF와 녹음 스크립트로 복습 노트를 만들어줘.
+function buildPrompt(topic, correct, script) {
+  const source = script ? "아래에 붙인 녹음 스크립트" : "녹음 스크립트";
+  let prompt = `강의 주제는 "${topic}"이다. 첨부한 강의안 PDF와 ${source}로 복습 노트를 만들어줘.
 
 ${correct ? CORRECT_STEP : SKIP_STEP}
 
@@ -356,6 +368,36 @@ label 기준:
 
 flow는 교수님이 과정이나 순서를 설명했을 때만 3~6개 단어로 채우고, 아니면 빈 배열로 둬라.
 출력이 길어지면 잘리는 지점에서 멈추고, 내가 "이어서"라고 하면 잘린 지점부터 이어서 출력해라.`;
+  if (script) {
+    prompt += `
+
+--- 녹음 스크립트 시작 ---
+${script}
+--- 녹음 스크립트 끝 ---`;
+  }
+  return prompt;
+}
+
+// 한국어 녹음 스크립트는 EUC-KR로 저장된 경우가 있어 UTF-8 해석에 실패하면 EUC-KR로 다시 읽는다
+function decodeTextFile(buf) {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buf);
+  } catch (e) {
+    try { return new TextDecoder("euc-kr").decode(buf); }
+    catch (e2) { return new TextDecoder().decode(buf); }
+  }
+}
+
+// 자막 형식(srt/vtt)은 순번과 타임스탬프 줄을 걷어낸다
+function cleanTranscript(name, text) {
+  if (/\.(srt|vtt)$/i.test(name)) {
+    text = text
+      .replace(/^WEBVTT.*$/m, "")
+      .split("\n")
+      .filter(line => !/^\s*\d+\s*$/.test(line) && !/-->/.test(line))
+      .join("\n");
+  }
+  return text.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 const RETRY_PHRASE = "방금 출력을 지정한 JSON 형식에 맞게 다시 출력해줘";
@@ -644,6 +686,7 @@ const state = {
   lectureId: null,
   topic: "",
   correct: false,        // 기본값: 건너뛰기
+  script: null,          // { name, text } — 업로드한 녹음 스크립트
   chunks: [],
   draft: "",
   parseResult: null,
@@ -656,6 +699,7 @@ function go(view, id) {
   if (view === "new") {
     state.topic = "";
     state.correct = false;
+    state.script = null;
     state.chunks = [];
     state.draft = "";
     state.parseResult = null;
@@ -753,16 +797,56 @@ function renderNew(root) {
   seg.appendChild(bSkip);
   card1.appendChild(seg);
 
+  card1.appendChild(el("label", { class: "field-label", text: "녹음 스크립트 (선택)" }));
+  const scriptInput = el("input", { type: "file", accept: ".txt,.md,.srt,.vtt,text/plain", hidden: "" });
+  scriptInput.addEventListener("change", () => {
+    const file = scriptInput.files && scriptInput.files[0];
+    scriptInput.value = "";
+    if (!file) return;
+    file.arrayBuffer().then(buf => {
+      const text = cleanTranscript(file.name, decodeTextFile(buf));
+      if (!text) { toast("파일에서 텍스트를 읽지 못했습니다"); return; }
+      state.script = { name: file.name, text };
+      syncScriptUI();
+      toast("스크립트가 프롬프트에 포함됩니다");
+    }).catch(() => toast("파일을 읽지 못했습니다"));
+  });
+  card1.appendChild(scriptInput);
+  const scriptBtn = el("button", {
+    class: "btn btn-ghost", style: "width:100%",
+    onclick: () => scriptInput.click()
+  });
+  card1.appendChild(scriptBtn);
+  const scriptChip = el("div", { class: "script-chip" });
+  card1.appendChild(scriptChip);
+  const hintEl = el("p", { class: "hint" });
+
+  function syncScriptUI() {
+    scriptChip.textContent = "";
+    if (state.script) {
+      scriptChip.classList.add("on");
+      scriptChip.appendChild(el("span", { class: "name", text: `📄 ${state.script.name} · ${state.script.text.length.toLocaleString("ko-KR")}자` }));
+      scriptChip.appendChild(el("button", { text: "빼기", onclick: () => { state.script = null; syncScriptUI(); toast("스크립트를 뺐습니다"); } }));
+      scriptBtn.textContent = "다른 스크립트 파일로 바꾸기";
+      hintEl.textContent = "스크립트가 프롬프트에 포함됩니다. Claude 앱에 붙여넣고 강의안 PDF만 첨부하세요.";
+    } else {
+      scriptChip.classList.remove("on");
+      scriptBtn.textContent = "스크립트 파일 올리기 (.txt)";
+      hintEl.textContent = "Claude 앱에 붙여넣고 강의안 PDF와 스크립트를 함께 첨부하세요.";
+    }
+  }
+
   const copyBtn = el("button", {
     class: "btn btn-primary", text: "프롬프트 복사", style: "margin-top:16px",
     onclick: () => {
       const topic = state.topic.trim();
       if (!topic) { toast("주제를 먼저 입력하세요"); topicInput.focus(); return; }
-      copyText(buildPrompt(topic, state.correct), "프롬프트 복사됨");
+      copyText(buildPrompt(topic, state.correct, state.script && state.script.text), "프롬프트 복사됨");
     }
   });
   card1.appendChild(copyBtn);
-  card1.appendChild(el("p", { class: "hint", text: "Claude 앱에 붙여넣고 강의안 PDF와 스크립트를 함께 첨부하세요." }));
+  card1.appendChild(hintEl);
+  syncScriptUI();
   root.appendChild(card1);
 
   const card2 = el("div", { class: "card" });
