@@ -1,0 +1,978 @@
+<title>강의 복습 노트</title>
+<style>
+  :root {
+    --bg: #F2F4F6;
+    --card: #FFFFFF;
+    --card-2: #F7F8FA;
+    --blue: #3182F6;
+    --blue-ink: #1B64DA;
+    --blue-soft: #E8F1FE;
+    --emph-bg: #FFF7E6;
+    --mute-bg: #F2F4F6;
+    --text: #191F28;
+    --text-sub: #6B7684;
+    --border: #E5E8EB;
+    --danger: #E5484D;
+    --ok: #1B7B4E;
+    --ok-soft: #EAF8F1;
+    --err-soft: #FFF0F1;
+    --toast-bg: rgba(25,31,40,.92);
+    --toast-text: #FFFFFF;
+    --shadow: 0 2px 10px rgba(0,0,0,0.05);
+    --radius: 20px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171A;
+      --card: #1E2125;
+      --card-2: #25282D;
+      --blue: #4E93F7;
+      --blue-ink: #8CBAFB;
+      --blue-soft: #1B2942;
+      --emph-bg: #38290F;
+      --mute-bg: #25282D;
+      --text: #EDEFF2;
+      --text-sub: #9AA4AF;
+      --border: #2E3238;
+      --danger: #F16A6E;
+      --ok: #2FBF7E;
+      --ok-soft: #16301F;
+      --err-soft: #3A1B1E;
+      --toast-bg: rgba(237,239,242,.94);
+      --toast-text: #15171A;
+      --shadow: 0 2px 10px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171A;
+    --card: #1E2125;
+    --card-2: #25282D;
+    --blue: #4E93F7;
+    --blue-ink: #8CBAFB;
+    --blue-soft: #1B2942;
+    --emph-bg: #38290F;
+    --mute-bg: #25282D;
+    --text: #EDEFF2;
+    --text-sub: #9AA4AF;
+    --border: #2E3238;
+    --danger: #F16A6E;
+    --ok: #2FBF7E;
+    --ok-soft: #16301F;
+    --err-soft: #3A1B1E;
+    --toast-bg: rgba(237,239,242,.94);
+    --toast-text: #15171A;
+    --shadow: 0 2px 10px rgba(0,0,0,0.35);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+      system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    padding-bottom: 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  h2 { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-bottom: 12px;
+  }
+  .topbar .actions { display: flex; gap: 8px; }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: none; border-radius: 14px;
+    font-family: inherit; font-size: 15px; font-weight: 700;
+    padding: 12px 16px; cursor: pointer;
+    transition: opacity .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { opacity: .75; }
+  .btn:focus-visible { outline: 2.5px solid var(--blue); outline-offset: 2px; }
+  .btn-primary { background: var(--blue); color: #fff; width: 100%; }
+  .btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .btn-sm { padding: 8px 12px; font-size: 13px; border-radius: 10px; }
+  .btn-danger { background: var(--card); color: var(--danger); border: 1px solid var(--border); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  input[type="text"], textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-family: inherit; font-size: 15px;
+    background: var(--card-2);
+    color: var(--text);
+  }
+  input[type="text"]:focus, textarea:focus { outline: 2px solid var(--blue); outline-offset: -1px; }
+  textarea { min-height: 160px; resize: vertical; line-height: 1.6; }
+  label.field-label {
+    display: block; font-size: 13px; font-weight: 700;
+    color: var(--text-sub); margin: 16px 0 6px;
+  }
+  .hint { font-size: 13px; color: var(--text-sub); margin-top: 8px; }
+  .autosave-note {
+    font-size: 13px; color: var(--text-sub);
+    background: var(--card); border-radius: 14px; padding: 10px 14px;
+    margin-bottom: 12px; box-shadow: var(--shadow);
+  }
+  .autosave-note b { color: var(--ok); font-weight: 700; }
+
+  .segment { display: flex; background: var(--bg); border-radius: 14px; padding: 4px; gap: 4px; }
+  .segment button {
+    flex: 1; border: none; border-radius: 10px; padding: 10px 8px;
+    font-family: inherit; font-size: 14px; font-weight: 700;
+    background: transparent; color: var(--text-sub); cursor: pointer;
+  }
+  .segment button.on { background: var(--blue); color: #fff; box-shadow: 0 1px 4px rgba(49,130,246,.4); }
+
+  .lecture-card { cursor: pointer; }
+  .lecture-card .topic { font-size: 16px; font-weight: 800; margin-bottom: 4px; overflow-wrap: anywhere; }
+  .lecture-card .meta { font-size: 13px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
+  .empty-state { text-align: center; color: var(--text-sub); padding: 48px 16px; font-size: 14px; white-space: pre-line; }
+
+  .page-card { padding: 16px 20px; }
+  .page-head {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .page-head .title { font-weight: 800; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .page-head .chev { color: var(--text-sub); font-size: 12px; flex-shrink: 0; }
+  .badge {
+    background: var(--blue); color: #fff;
+    font-size: 12px; font-weight: 800; border-radius: 8px; padding: 2px 8px;
+    flex-shrink: 0; font-variant-numeric: tabular-nums;
+  }
+  .page-body { margin-top: 12px; }
+  .note { border-radius: 12px; padding: 8px 12px; margin-bottom: 6px; overflow-wrap: anywhere; }
+  .note.emphasis { background: var(--emph-bg); }
+  .note.excluded { background: var(--mute-bg); color: var(--text-sub); text-decoration: line-through; }
+  .extra-box {
+    background: var(--blue-soft);
+    border-left: 4px solid var(--blue);
+    border-radius: 12px; padding: 10px 12px; margin-top: 10px;
+  }
+  .extra-box .extra-title { font-size: 12px; font-weight: 800; color: var(--blue-ink); margin-bottom: 4px; }
+  .extra-box div { overflow-wrap: anywhere; }
+  .flow-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+  .flow-chip {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600;
+  }
+  .flow-arrow { color: var(--text-sub); font-weight: 700; }
+  .page-empty {
+    border: 1.5px dashed var(--border); border-radius: 14px;
+    padding: 8px 14px; margin-bottom: 8px;
+    font-size: 13px; color: var(--text-sub);
+  }
+
+  .parse-error {
+    background: var(--err-soft); border-radius: 12px; padding: 12px 14px;
+    color: var(--danger); font-size: 14px; margin-top: 10px; overflow-wrap: anywhere;
+  }
+  .parse-ok {
+    background: var(--ok-soft); border-radius: 12px; padding: 12px 14px;
+    color: var(--ok); font-size: 14px; margin-top: 10px;
+  }
+  .chunk-count {
+    display: inline-block; background: var(--blue-soft); color: var(--blue-ink);
+    font-size: 13px; font-weight: 700; border-radius: 999px; padding: 3px 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 28px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--toast-bg); color: var(--toast-text);
+    font-size: 14px; font-weight: 600; border-radius: 999px; padding: 10px 20px;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s, transform .2s;
+    z-index: 100; max-width: 90vw; text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  .modal-back {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    display: flex; align-items: flex-end; justify-content: center; z-index: 50;
+  }
+  .modal {
+    background: var(--card); border-radius: 24px 24px 0 0;
+    padding: 24px 20px 32px; width: 100%; max-width: 720px;
+  }
+  .modal h2 { margin-bottom: 8px; }
+  .modal p { color: var(--text-sub); font-size: 14px; margin-bottom: 16px; }
+  .modal .btn { width: 100%; margin-bottom: 8px; }
+  .copy-fallback textarea { min-height: 120px; font-size: 13px; }
+
+  .back-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: none; border: none;
+    font-family: inherit; font-size: 15px; font-weight: 700;
+    color: var(--text-sub); cursor: pointer; padding: 4px 0; margin-bottom: 8px;
+  }
+  .row-gap { display: flex; gap: 8px; }
+  .row-gap .btn { flex: 1; }
+</style>
+
+<div class="wrap" id="app"><div class="empty-state">불러오는 중…</div></div>
+<div id="toast"></div>
+<input type="file" id="restoreFile" accept=".json,application/json" hidden>
+
+<script>
+"use strict";
+
+/* ============================================================
+   저장소 — IndexedDB, 모든 변경이 즉시 자동 저장된다
+   ============================================================ */
+const DB_NAME = "lecture-organizer";
+const STORE_KEY = "lectures_v1";
+let lectures = [];
+
+let dbPromise = null;
+function idbOpen() {
+  return dbPromise || (dbPromise = new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  }));
+}
+async function idbSet(key, val) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("kv", "readwrite");
+    tx.objectStore("kv").put(val, key);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("kv");
+    const rq = tx.objectStore("kv").get(key);
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+
+let saveQueue = Promise.resolve();
+function persistLectures() {
+  const snapshot = JSON.stringify(lectures);
+  saveQueue = saveQueue.then(() => idbSet(STORE_KEY, snapshot)).catch(() => {
+    toast("자동 저장에 실패했습니다. [백업]으로 데이터를 파일로 저장해 두세요.");
+  });
+  return true;
+}
+
+// 브라우저에 저장 데이터를 지우지 말라고 요청
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {});
+}
+
+async function initStore() {
+  try {
+    const raw = await idbGet(STORE_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) lectures = arr;
+    }
+  } catch (e) { /* 빈 상태로 시작 */ }
+  render();
+}
+
+/* ============================================================
+   파일 저장 — 아티팩트 뷰어에서는 downloads 기능, 밖에서는 링크 다운로드
+   ============================================================ */
+async function saveFile(name, content) {
+  let dl = null;
+  try {
+    if (typeof claude !== "undefined" && claude && claude.use) dl = await claude.use("downloads");
+  } catch (e) { dl = null; }
+
+  if (dl) {
+    try {
+      await dl.save({ filename: name, data: content });
+      return true;
+    } catch (e) {
+      if (e && e.code === "declined") { toast("저장을 취소했습니다"); return false; }
+      if (e && e.code === "rate_limited") { toast("잠시 후 다시 시도하세요"); return false; }
+      // 그 외에는 링크 다운로드로 폴백
+    }
+  }
+  const blob = new Blob([content], { type: "application/octet-stream" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  return true;
+}
+
+/* ============================================================
+   프롬프트 템플릿
+   ============================================================ */
+const CORRECT_STEP = `1단계 — 스크립트 교정: 스크립트는 음성 인식 결과라 오인식이 많다. 강의안에 실제로 등장하는 용어를 근거로 잘못 인식된 전문용어, 영어 용어, 숫자를 교정해라. 근거 없이 추측해서 고치지 말고, 애매하면 원문 뒤에 [확인 필요]를 붙여라. 교정 과정은 출력하지 말고 내부적으로만 수행해라.
+
+2단계 — 페이지별 정리: 강의안의 각 페이지에 대해 교수님이 스크립트에서 실제로 말한 내용만 정리해라.`;
+
+const SKIP_STEP = `스크립트는 교정 없이 그대로 사용해라.
+
+페이지별 정리: 강의안의 각 페이지에 대해 교수님이 스크립트에서 실제로 말한 내용만 정리해라.`;
+
+function buildPrompt(topic, correct) {
+  return `강의 주제는 "${topic}"이다. 첨부한 강의안 PDF와 녹음 스크립트로 복습 노트를 만들어줘.
+
+${correct ? CORRECT_STEP : SKIP_STEP}
+
+핵심 규칙:
+- 강의안에만 있고 교수님이 말하지 않은 내용은 절대 넣지 않는다
+- 스크립트에 해당 페이지 설명이 없으면 notes를 빈 배열로 둔다
+- 강의안의 모든 페이지를 각각 하나의 객체로 만든다 (1쪽부터 마지막 쪽까지 빠짐없이)
+- 표나 그림에 대한 교수님 설명도 포함한다
+- 모든 문장은 한국어 평서문 '이다'체로 쓰고 영어 전문용어는 영어 그대로 둔다
+
+출력 형식: 아래 JSON 배열 하나만 코드블록으로 출력해라. 다른 설명은 쓰지 마라.
+[{"page":숫자,"title":"페이지 제목","notes":[{"text":"교수님이 말한 내용 한 줄","label":"emphasis|normal|excluded"}],"extra":["강의안에 없는데 교수님이 덧붙인 내용"],"flow":["개념","흐름"]}]
+
+label 기준:
+- emphasis: 중요하다, 시험에 나온다, 꼭 알아야 한다며 강조하거나 반복한 내용
+- normal: 일반 설명
+- excluded: 넘어간다, 안 봐도 된다고 말한 내용
+
+flow는 교수님이 과정이나 순서를 설명했을 때만 3~6개 단어로 채우고, 아니면 빈 배열로 둬라.
+출력이 길어지면 잘리는 지점에서 멈추고, 내가 "이어서"라고 하면 잘린 지점부터 이어서 출력해라.`;
+}
+
+const RETRY_PHRASE = "방금 출력을 지정한 JSON 형식에 맞게 다시 출력해줘";
+
+/* ============================================================
+   파싱
+   ============================================================ */
+function cleanChunk(text) {
+  return text.replace(/```[a-zA-Z]*\n?/g, "").trim();
+}
+
+function parseChunks(chunks) {
+  let s = chunks.map(cleanChunk).join("\n").trim();
+  if (!s) return { error: "붙여넣은 내용이 없습니다." };
+
+  const start = s.indexOf("[");
+  if (start === -1) {
+    return { error: "JSON 배열의 시작 기호 [ 를 찾지 못했습니다. Claude의 코드블록 출력 전체를 붙여넣었는지 확인하세요." };
+  }
+  s = s.slice(start);
+
+  const lastClose = s.lastIndexOf("]");
+  if (lastClose === -1) return { incomplete: true };
+
+  let arr = null;
+  let parseErr = null;
+  for (const candidate of [s.slice(0, lastClose + 1), s]) {
+    try {
+      const v = JSON.parse(candidate);
+      if (Array.isArray(v)) { arr = v; break; }
+      parseErr = "최상위 값이 JSON 배열이 아닙니다.";
+    } catch (e) {
+      parseErr = e.message;
+    }
+  }
+
+  if (!arr) {
+    if (!/\]\s*$/.test(s)) return { incomplete: true };
+    return { error: "JSON 파싱 실패: " + parseErr };
+  }
+
+  const byPage = new Map();
+  let skipped = 0;
+  for (const item of arr) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) { skipped++; continue; }
+    const page = Number(item.page);
+    if (!Number.isFinite(page)) { skipped++; continue; }
+
+    const notes = Array.isArray(item.notes) ? item.notes : [];
+    const fixedNotes = [];
+    for (const n of notes) {
+      if (n == null) continue;
+      if (typeof n === "string") { fixedNotes.push({ text: n, label: "normal" }); continue; }
+      if (typeof n !== "object") continue;
+      const text = typeof n.text === "string" ? n.text : String(n.text ?? "");
+      if (!text) continue;
+      const label = ["emphasis", "normal", "excluded"].includes(n.label) ? n.label : "normal";
+      fixedNotes.push({ text, label });
+    }
+
+    const extra = Array.isArray(item.extra) ? item.extra.filter(x => typeof x === "string" && x) : [];
+    const flow = Array.isArray(item.flow) ? item.flow.filter(x => typeof x === "string" && x) : [];
+    const title = typeof item.title === "string" ? item.title : "";
+
+    byPage.set(page, { page, title, notes: fixedNotes, extra, flow });
+  }
+
+  if (byPage.size === 0) {
+    return { error: "유효한 페이지 객체가 하나도 없습니다. page 번호가 숫자인지 확인하세요." };
+  }
+
+  const pages = [...byPage.values()].sort((a, b) => a.page - b.page);
+  const withNotes = pages.filter(p => p.notes.length > 0 || p.extra.length > 0).length;
+  return { pages, total: pages.length, withNotes, skipped };
+}
+
+/* ============================================================
+   유틸
+   ============================================================ */
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  if (attrs) {
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") node.className = v;
+      else if (k === "onclick") node.addEventListener("click", v);
+      else if (k === "oninput") node.addEventListener("input", v);
+      else if (k === "text") node.textContent = v;
+      else node.setAttribute(k, v);
+    }
+  }
+  for (const c of children) {
+    if (c == null) continue;
+    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  return node;
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function copyText(text, okMsg) {
+  const ok = () => toast(okMsg || "복사됨");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(ok).catch(() => copyFallback(text));
+  } else {
+    copyFallback(text);
+  }
+}
+
+function copyFallback(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let done = false;
+  try { done = document.execCommand("copy"); } catch (e) { done = false; }
+  document.body.removeChild(ta);
+  if (done) { toast("복사됨"); return; }
+
+  showModal(box => {
+    box.appendChild(el("h2", { text: "직접 복사해 주세요" }));
+    box.appendChild(el("p", { text: "자동 복사가 지원되지 않는 환경입니다. 아래 내용을 길게 눌러 전체 선택 후 복사하세요." }));
+    const wrap = el("div", { class: "copy-fallback" });
+    const t2 = el("textarea");
+    t2.value = text;
+    t2.setAttribute("readonly", "");
+    wrap.appendChild(t2);
+    box.appendChild(wrap);
+    box.appendChild(el("button", { class: "btn btn-ghost", text: "닫기", onclick: closeModal, style: "margin-top:12px" }));
+    setTimeout(() => { t2.focus(); t2.select(); }, 50);
+  });
+}
+
+let modalBack = null;
+function showModal(build) {
+  closeModal();
+  modalBack = el("div", { class: "modal-back", onclick: e => { if (e.target === modalBack) closeModal(); } });
+  const box = el("div", { class: "modal" });
+  build(box);
+  modalBack.appendChild(box);
+  document.body.appendChild(modalBack);
+}
+function closeModal() {
+  if (modalBack) { modalBack.remove(); modalBack = null; }
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  return d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+}
+
+function lectureStats(lec) {
+  const total = lec.pages.length;
+  const withNotes = lec.pages.filter(p => (p.notes && p.notes.length) || (p.extra && p.extra.length)).length;
+  return { total, withNotes };
+}
+
+function safeFileName(s) {
+  return (s || "강의노트").replace(/[\\/:*?"<>|]/g, "_").slice(0, 80);
+}
+
+function newId() {
+  return (crypto.randomUUID && crypto.randomUUID()) ||
+    "id-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+}
+
+/* ============================================================
+   백업 / 복원
+   ============================================================ */
+function backupPayload() {
+  return { app: "lecture-organizer", version: 1, exportedAt: new Date().toISOString(), lectures };
+}
+
+async function doBackup() {
+  if (lectures.length === 0) { toast("백업할 강의가 없습니다"); return; }
+  const date = new Date().toISOString().slice(0, 10);
+  const ok = await saveFile(`강의노트-백업-${date}.json`, JSON.stringify(backupPayload(), null, 2));
+  if (ok) toast("백업 파일을 저장했습니다");
+}
+
+function doRestore() {
+  document.getElementById("restoreFile").click();
+}
+
+document.getElementById("restoreFile").addEventListener("change", function () {
+  const file = this.files && this.files[0];
+  this.value = "";
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let incoming = null;
+    try {
+      const data = JSON.parse(reader.result);
+      if (Array.isArray(data)) incoming = data;
+      else if (data && Array.isArray(data.lectures)) incoming = data.lectures;
+    } catch (e) { /* 아래에서 처리 */ }
+    if (!incoming) { toast("올바른 백업 파일이 아닙니다"); return; }
+    incoming = incoming.filter(l => l && typeof l === "object" && Array.isArray(l.pages));
+    if (incoming.length === 0) { toast("백업 파일에 강의가 없습니다"); return; }
+
+    showModal(box => {
+      box.appendChild(el("h2", { text: "복원 방법 선택" }));
+      box.appendChild(el("p", { text: `파일에 강의 ${incoming.length}개가 있습니다. 현재 저장된 강의는 ${lectures.length}개입니다.` }));
+      box.appendChild(el("button", {
+        class: "btn btn-primary", text: "병합 (기존 데이터 유지 + 추가)",
+        onclick: () => { applyRestore(incoming, false); }
+      }));
+      box.appendChild(el("button", {
+        class: "btn btn-danger", text: "덮어쓰기 (기존 데이터 삭제)",
+        onclick: () => { applyRestore(incoming, true); }
+      }));
+      box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+    });
+  };
+  reader.onerror = () => toast("파일을 읽지 못했습니다");
+  reader.readAsText(file);
+});
+
+function applyRestore(incoming, overwrite) {
+  closeModal();
+  if (overwrite) {
+    lectures = incoming;
+  } else {
+    const map = new Map(lectures.map(l => [l.id, l]));
+    for (const l of incoming) {
+      const id = l.id || newId();
+      map.set(id, { ...l, id });
+    }
+    lectures = [...map.values()];
+  }
+  persistLectures();
+  toast(overwrite ? "덮어쓰기 완료" : "병합 완료");
+  state.view = "home";
+  render();
+}
+
+/* ============================================================
+   Markdown 내보내기
+   ============================================================ */
+function lectureToMarkdown(lec) {
+  const lines = [`# ${lec.topic}`, "", `저장일: ${fmtDate(lec.createdAt)}`, ""];
+  const emptyPages = [];
+  for (const p of lec.pages) {
+    const hasContent = (p.notes && p.notes.length) || (p.extra && p.extra.length);
+    if (!hasContent) { emptyPages.push(p); continue; }
+    lines.push(`## p.${p.page} ${p.title || ""}`.trim(), "");
+    for (const n of p.notes || []) {
+      if (n.label === "emphasis") lines.push(`- 🟡 **${n.text}**`);
+      else if (n.label === "excluded") lines.push(`- ⚪ ~~${n.text}~~`);
+      else lines.push(`- ${n.text}`);
+    }
+    if (p.extra && p.extra.length) {
+      lines.push("", "> 강의안에 없는 추가 설명:");
+      for (const x of p.extra) lines.push(`> - ${x}`);
+    }
+    if (p.flow && p.flow.length) {
+      lines.push("", `흐름: ${p.flow.join(" → ")}`);
+    }
+    lines.push("");
+  }
+  if (emptyPages.length) {
+    lines.push("---", "", "## 설명 없는 페이지", "");
+    for (const p of emptyPages) lines.push(`- p.${p.page} ${p.title || ""}`.trimEnd());
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+/* ============================================================
+   상태 & 라우팅
+   ============================================================ */
+const state = {
+  view: "home",
+  search: "",
+  lectureId: null,
+  topic: "",
+  correct: false,        // 기본값: 건너뛰기
+  chunks: [],
+  draft: "",
+  parseResult: null,
+  collapsed: new Set()
+};
+
+function go(view, id) {
+  state.view = view;
+  state.lectureId = id ?? null;
+  if (view === "new") {
+    state.topic = "";
+    state.correct = false;
+    state.chunks = [];
+    state.draft = "";
+    state.parseResult = null;
+  }
+  if (view === "lecture") state.collapsed = new Set();
+  render();
+  window.scrollTo(0, 0);
+}
+
+/* ============================================================
+   화면: 홈 (강의 목록)
+   ============================================================ */
+function renderHome(root) {
+  const top = el("div", { class: "topbar" },
+    el("h1", { text: "강의 복습 노트" }),
+    el("div", { class: "actions" },
+      el("button", { class: "btn btn-ghost btn-sm", text: "백업", onclick: doBackup }),
+      el("button", { class: "btn btn-ghost btn-sm", text: "복원", onclick: doRestore })
+    )
+  );
+  root.appendChild(top);
+
+  root.appendChild(el("div", { class: "autosave-note" },
+    el("b", { text: "✓ 자동 저장 " }),
+    "모든 변경이 이 기기의 브라우저에 바로 저장됩니다. 기기를 바꾸거나 브라우저 데이터를 지울 때를 대비해 가끔 [백업]으로 파일을 남겨 두세요."
+  ));
+
+  const search = el("input", {
+    type: "text",
+    placeholder: "주제 검색",
+    value: state.search,
+    oninput: e => { state.search = e.target.value; renderList(); }
+  });
+  root.appendChild(el("div", { style: "margin-bottom:12px" }, search));
+
+  const newBtn = el("button", { class: "btn btn-primary", text: "+ 새 강의", onclick: () => go("new") });
+  root.appendChild(el("div", { style: "margin-bottom:16px" }, newBtn));
+
+  const listWrap = el("div");
+  root.appendChild(listWrap);
+
+  function renderList() {
+    listWrap.textContent = "";
+    const q = state.search.trim().toLowerCase();
+    const filtered = lectures
+      .filter(l => !q || (l.topic || "").toLowerCase().includes(q))
+      .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    if (filtered.length === 0) {
+      listWrap.appendChild(el("div", { class: "empty-state", text: lectures.length === 0 ? "아직 저장된 강의가 없습니다.\n[+ 새 강의]로 시작하세요." : "검색 결과가 없습니다." }));
+      return;
+    }
+    for (const lec of filtered) {
+      const s = lectureStats(lec);
+      const card = el("div", { class: "card lecture-card", onclick: () => go("lecture", lec.id) },
+        el("div", { class: "topic", text: lec.topic || "(제목 없음)" }),
+        el("div", { class: "meta", text: `${fmtDate(lec.createdAt)} · 전체 ${s.total}쪽 중 ${s.withNotes}쪽 설명 있음` })
+      );
+      listWrap.appendChild(card);
+    }
+  }
+  renderList();
+}
+
+/* ============================================================
+   화면: 새 강의 / 프롬프트 생성
+   ============================================================ */
+function renderNew(root) {
+  root.appendChild(el("button", { class: "back-link", text: "‹ 목록으로", onclick: () => go("home") }));
+  root.appendChild(el("h1", { text: "새 강의", style: "margin-bottom:12px" }));
+
+  const card1 = el("div", { class: "card" });
+  card1.appendChild(el("h2", { text: "1. 프롬프트 만들기" }));
+
+  card1.appendChild(el("label", { class: "field-label", text: "강의 주제" }));
+  const topicInput = el("input", {
+    type: "text",
+    placeholder: "예: 감염과 면역 – Enterobacteriaceae",
+    value: state.topic,
+    oninput: e => { state.topic = e.target.value; }
+  });
+  card1.appendChild(topicInput);
+
+  card1.appendChild(el("label", { class: "field-label", text: "스크립트 교정" }));
+  const seg = el("div", { class: "segment" });
+  const bCorrect = el("button", { text: "교정하기" });
+  const bSkip = el("button", { text: "건너뛰기" });
+  function syncSeg() {
+    bCorrect.className = state.correct ? "on" : "";
+    bSkip.className = state.correct ? "" : "on";
+  }
+  bCorrect.addEventListener("click", () => { state.correct = true; syncSeg(); });
+  bSkip.addEventListener("click", () => { state.correct = false; syncSeg(); });
+  syncSeg();
+  seg.appendChild(bCorrect);
+  seg.appendChild(bSkip);
+  card1.appendChild(seg);
+
+  const copyBtn = el("button", {
+    class: "btn btn-primary", text: "프롬프트 복사", style: "margin-top:16px",
+    onclick: () => {
+      const topic = state.topic.trim();
+      if (!topic) { toast("주제를 먼저 입력하세요"); topicInput.focus(); return; }
+      copyText(buildPrompt(topic, state.correct), "프롬프트 복사됨");
+    }
+  });
+  card1.appendChild(copyBtn);
+  card1.appendChild(el("p", { class: "hint", text: "Claude 앱에 붙여넣고 강의안 PDF와 스크립트를 함께 첨부하세요." }));
+  root.appendChild(card1);
+
+  const card2 = el("div", { class: "card" });
+  card2.appendChild(el("h2", { text: "2. 결과 붙여넣기" }));
+  card2.appendChild(el("p", { class: "hint", style: "margin:6px 0 10px", text: "Claude가 출력한 JSON 코드블록을 복사해 아래에 붙여넣으세요. 출력이 잘렸다면 조각마다 [추가]를 눌러 쌓은 뒤 저장하면 됩니다." }));
+
+  const ta = el("textarea", {
+    placeholder: "여기에 Claude 출력 붙여넣기",
+    oninput: e => { state.draft = e.target.value; }
+  });
+  ta.value = state.draft;
+  card2.appendChild(ta);
+
+  const statusRow = el("div", { style: "display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap" });
+  const chunkBadge = el("span", { class: "chunk-count" });
+  function syncChunkBadge() {
+    chunkBadge.textContent = `조각 ${state.chunks.length}개`;
+    chunkBadge.style.display = state.chunks.length ? "" : "none";
+    clearChunksBtn.style.display = state.chunks.length ? "" : "none";
+  }
+  const clearChunksBtn = el("button", {
+    class: "btn btn-ghost btn-sm", text: "조각 비우기",
+    onclick: () => { state.chunks = []; state.parseResult = null; syncChunkBadge(); renderParseArea(); toast("조각을 비웠습니다"); }
+  });
+  statusRow.appendChild(chunkBadge);
+  statusRow.appendChild(clearChunksBtn);
+  card2.appendChild(statusRow);
+
+  const btnRow = el("div", { class: "row-gap", style: "margin-top:10px" });
+  btnRow.appendChild(el("button", {
+    class: "btn btn-ghost", text: "추가",
+    onclick: () => {
+      const v = ta.value.trim();
+      if (!v) { toast("붙여넣은 내용이 없습니다"); return; }
+      state.chunks.push(v);
+      state.draft = "";
+      ta.value = "";
+      syncChunkBadge();
+      toast(`조각 ${state.chunks.length}개 추가됨`);
+    }
+  }));
+  btnRow.appendChild(el("button", {
+    class: "btn btn-primary", text: "저장", style: "width:auto",
+    onclick: () => {
+      const all = [...state.chunks];
+      const v = ta.value.trim();
+      if (v) { all.push(v); state.chunks.push(v); state.draft = ""; ta.value = ""; syncChunkBadge(); }
+      if (all.length === 0) { toast("붙여넣은 내용이 없습니다"); return; }
+      state.parseResult = parseChunks(all);
+      renderParseArea();
+    }
+  }));
+  card2.appendChild(btnRow);
+
+  const parseArea = el("div");
+  card2.appendChild(parseArea);
+
+  function renderParseArea() {
+    parseArea.textContent = "";
+    const r = state.parseResult;
+    if (!r) return;
+
+    if (r.incomplete) {
+      parseArea.appendChild(el("div", { class: "parse-error", text: "출력이 중간에 잘린 것 같습니다 (JSON 배열이 ] 로 끝나지 않음). Claude에게 \"이어서\"라고 요청한 뒤, 이어지는 부분을 붙여넣고 [추가]를 누르고 다시 [저장]하세요." }));
+      return;
+    }
+    if (r.error) {
+      parseArea.appendChild(el("div", { class: "parse-error", text: "파싱 실패: " + r.error }));
+      parseArea.appendChild(el("button", {
+        class: "btn btn-ghost", text: "재요청 문구 복사", style: "margin-top:10px;width:100%",
+        onclick: () => copyText(RETRY_PHRASE, "재요청 문구 복사됨")
+      }));
+      return;
+    }
+
+    let msg = `${r.total}쪽 파싱됨, 그중 ${r.withNotes}쪽 설명 있음`;
+    if (r.skipped) msg += ` (형식이 잘못된 항목 ${r.skipped}개는 제외)`;
+    parseArea.appendChild(el("div", { class: "parse-ok", text: msg }));
+
+    parseArea.appendChild(el("button", {
+      class: "btn btn-primary", text: "저장 확정", style: "margin-top:10px",
+      onclick: () => {
+        const topic = state.topic.trim();
+        if (!topic) { toast("강의 주제를 입력하세요"); topicInput.focus(); window.scrollTo(0, 0); return; }
+        const lec = {
+          id: newId(),
+          topic,
+          createdAt: new Date().toISOString(),
+          pages: r.pages
+        };
+        lectures.push(lec);
+        persistLectures();
+        toast("저장됨");
+        go("lecture", lec.id);
+      }
+    }));
+  }
+
+  syncChunkBadge();
+  renderParseArea();
+  root.appendChild(card2);
+}
+
+/* ============================================================
+   화면: 강의 열람
+   ============================================================ */
+function renderLecture(root) {
+  const lec = lectures.find(l => l.id === state.lectureId);
+  if (!lec) { go("home"); return; }
+
+  root.appendChild(el("button", { class: "back-link", text: "‹ 목록으로", onclick: () => go("home") }));
+  root.appendChild(el("h1", { text: lec.topic || "(제목 없음)" }));
+  const s = lectureStats(lec);
+  root.appendChild(el("p", { class: "hint", style: "margin:4px 0 14px", text: `${fmtDate(lec.createdAt)} · 전체 ${s.total}쪽 중 ${s.withNotes}쪽 설명 있음` }));
+
+  const actionRow = el("div", { class: "row-gap", style: "margin-bottom:16px" });
+  actionRow.appendChild(el("button", {
+    class: "btn btn-ghost", text: "노트 내려받기",
+    onclick: async () => {
+      const ok = await saveFile(safeFileName(lec.topic) + ".md", lectureToMarkdown(lec));
+      if (ok) toast("Markdown 파일을 저장했습니다");
+    }
+  }));
+  actionRow.appendChild(el("button", {
+    class: "btn btn-danger", text: "강의 삭제",
+    onclick: () => {
+      showModal(box => {
+        box.appendChild(el("h2", { text: "강의 삭제" }));
+        box.appendChild(el("p", { text: `"${lec.topic}" 강의를 삭제할까요? 되돌릴 수 없습니다.` }));
+        box.appendChild(el("button", {
+          class: "btn btn-danger", text: "삭제",
+          onclick: () => {
+            closeModal();
+            lectures = lectures.filter(l => l.id !== lec.id);
+            persistLectures();
+            toast("삭제됨");
+            go("home");
+          }
+        }));
+        box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+      });
+    }
+  }));
+  root.appendChild(actionRow);
+
+  for (const p of lec.pages) {
+    const hasContent = (p.notes && p.notes.length) || (p.extra && p.extra.length);
+
+    if (!hasContent) {
+      root.appendChild(el("div", { class: "page-empty", text: `p.${p.page} ${p.title || ""} · 설명 없음`.replace("  ", " ") }));
+      continue;
+    }
+
+    const card = el("div", { class: "card page-card" });
+    const body = el("div", { class: "page-body" });
+    const chev = el("span", { class: "chev", text: state.collapsed.has(p.page) ? "▸" : "▾" });
+
+    const head = el("div", {
+      class: "page-head",
+      onclick: () => {
+        if (state.collapsed.has(p.page)) state.collapsed.delete(p.page);
+        else state.collapsed.add(p.page);
+        const closed = state.collapsed.has(p.page);
+        body.style.display = closed ? "none" : "";
+        chev.textContent = closed ? "▸" : "▾";
+      }
+    },
+      el("span", { class: "badge", text: "p." + p.page }),
+      el("span", { class: "title", text: p.title || "" }),
+      chev
+    );
+    card.appendChild(head);
+
+    for (const n of p.notes || []) {
+      const cls = n.label === "emphasis" ? "note emphasis" : n.label === "excluded" ? "note excluded" : "note";
+      const prefix = n.label === "emphasis" ? "🟡 " : n.label === "excluded" ? "⚪ " : "";
+      body.appendChild(el("div", { class: cls, text: prefix + n.text }));
+    }
+
+    if (p.extra && p.extra.length) {
+      const box = el("div", { class: "extra-box" }, el("div", { class: "extra-title", text: "강의안에 없는 추가 설명" }));
+      for (const x of p.extra) box.appendChild(el("div", { text: "· " + x }));
+      body.appendChild(box);
+    }
+
+    if (p.flow && p.flow.length) {
+      const row = el("div", { class: "flow-row" });
+      p.flow.forEach((f, i) => {
+        if (i > 0) row.appendChild(el("span", { class: "flow-arrow", text: "→" }));
+        row.appendChild(el("span", { class: "flow-chip", text: f }));
+      });
+      body.appendChild(row);
+    }
+
+    if (state.collapsed.has(p.page)) body.style.display = "none";
+    card.appendChild(body);
+    root.appendChild(card);
+  }
+}
+
+/* ============================================================
+   렌더 루트
+   ============================================================ */
+function render() {
+  const root = document.getElementById("app");
+  root.textContent = "";
+  if (state.view === "home") renderHome(root);
+  else if (state.view === "new") renderNew(root);
+  else if (state.view === "lecture") renderLecture(root);
+}
+
+initStore();
+</script>
