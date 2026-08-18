@@ -136,18 +136,36 @@
   }
   .segment button.on { background: var(--blue); color: #fff; box-shadow: 0 1px 4px rgba(49,130,246,.4); }
 
-  .script-chip {
-    display: none; align-items: center; gap: 8px; margin-top: 10px;
-    background: var(--blue-soft); border-radius: 12px; padding: 8px 12px; font-size: 13px;
-  }
-  .script-chip.on { display: flex; }
-  .script-chip .name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
-  .script-chip button {
-    background: none; border: none; color: var(--text-sub); font-weight: 700;
-    cursor: pointer; font-family: inherit; font-size: 13px; flex-shrink: 0;
+  .script-area { min-height: 110px; font-size: 14px; }
+  .script-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .script-count {
+    margin-left: auto; font-size: 13px; font-weight: 700;
+    color: var(--blue-ink); font-variant-numeric: tabular-nums;
   }
 
-  .lecture-card { cursor: pointer; }
+  .sort-row {
+    display: flex; gap: 6px; overflow-x: auto;
+    padding-bottom: 4px; margin-bottom: 12px; -webkit-overflow-scrolling: touch;
+  }
+  .sort-chip {
+    flex-shrink: 0; border: 1px solid var(--border);
+    background: var(--card); color: var(--text-sub);
+    border-radius: 999px; padding: 6px 14px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .sort-chip.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  .lecture-card { display: flex; align-items: flex-start; gap: 10px; }
+  .lecture-body { flex: 1; min-width: 0; cursor: pointer; }
+  .rename-btn {
+    flex-shrink: 0; border: 1px solid var(--border);
+    background: var(--card); color: var(--text-sub);
+    border-radius: 10px; padding: 6px 10px;
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+
   .lecture-card .topic { font-size: 16px; font-weight: 800; margin-bottom: 4px; overflow-wrap: anywhere; }
   .lecture-card .meta { font-size: 13px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
   .empty-state { text-align: center; color: var(--text-sub); padding: 48px 16px; font-size: 14px; white-space: pre-line; }
@@ -248,6 +266,7 @@
    ============================================================ */
 const DB_NAME = "lecture-organizer";
 const STORE_KEY = "lectures_v1";
+const SORT_KEY = "lectures_sort_v1";
 let lectures = [];
 
 let dbPromise = null;
@@ -300,6 +319,10 @@ async function initStore() {
       if (Array.isArray(arr)) lectures = arr;
     }
   } catch (e) { /* 빈 상태로 시작 */ }
+  try {
+    const s = await idbGet(SORT_KEY);
+    if (s && SORTS.some(x => x.key === s)) state.sort = s;
+  } catch (e) { /* 기본 정렬 유지 */ }
   render();
 }
 
@@ -686,12 +709,24 @@ const state = {
   lectureId: null,
   topic: "",
   correct: false,        // 기본값: 건너뛰기
-  script: null,          // { name, text } — 업로드한 녹음 스크립트
+  script: "",            // 붙여넣거나 파일에서 불러온 녹음 스크립트
   chunks: [],
   draft: "",
   parseResult: null,
-  collapsed: new Set()
+  collapsed: new Set(),
+  sort: "recent"         // 목록 정렬 기준 (initStore에서 저장값으로 덮어씀)
 };
+
+const SORTS = [
+  { key: "recent", label: "최신순", cmp: (a, b) => (b.createdAt || "").localeCompare(a.createdAt || "") },
+  { key: "oldest", label: "오래된순", cmp: (a, b) => (a.createdAt || "").localeCompare(b.createdAt || "") },
+  { key: "title", label: "가나다순", cmp: (a, b) => (a.topic || "").localeCompare(b.topic || "", "ko") },
+  { key: "notes", label: "설명 많은순", cmp: (a, b) => lectureStats(b).withNotes - lectureStats(a).withNotes }
+];
+
+function saveSort(key) {
+  idbSet(SORT_KEY, key).catch(() => {});
+}
 
 function go(view, id) {
   state.view = view;
@@ -699,7 +734,7 @@ function go(view, id) {
   if (view === "new") {
     state.topic = "";
     state.correct = false;
-    state.script = null;
+    state.script = "";
     state.chunks = [];
     state.draft = "";
     state.parseResult = null;
@@ -738,29 +773,75 @@ function renderHome(root) {
   const newBtn = el("button", { class: "btn btn-primary", text: "+ 새 강의", onclick: () => go("new") });
   root.appendChild(el("div", { style: "margin-bottom:16px" }, newBtn));
 
+  const sortRow = el("div", { class: "sort-row" });
+  for (const s of SORTS) {
+    const chip = el("button", {
+      class: "sort-chip" + (state.sort === s.key ? " on" : ""),
+      text: s.label,
+      onclick: () => {
+        state.sort = s.key;
+        saveSort(s.key);
+        for (const c of sortRow.children) c.classList.remove("on");
+        chip.classList.add("on");
+        renderList();
+      }
+    });
+    sortRow.appendChild(chip);
+  }
+  root.appendChild(sortRow);
+
   const listWrap = el("div");
   root.appendChild(listWrap);
 
   function renderList() {
     listWrap.textContent = "";
     const q = state.search.trim().toLowerCase();
+    const cmp = (SORTS.find(s => s.key === state.sort) || SORTS[0]).cmp;
     const filtered = lectures
       .filter(l => !q || (l.topic || "").toLowerCase().includes(q))
-      .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+      .sort(cmp);
     if (filtered.length === 0) {
       listWrap.appendChild(el("div", { class: "empty-state", text: lectures.length === 0 ? "아직 저장된 강의가 없습니다.\n[+ 새 강의]로 시작하세요." : "검색 결과가 없습니다." }));
       return;
     }
     for (const lec of filtered) {
       const s = lectureStats(lec);
-      const card = el("div", { class: "card lecture-card", onclick: () => go("lecture", lec.id) },
+      const body = el("div", { class: "lecture-body", onclick: () => go("lecture", lec.id) },
         el("div", { class: "topic", text: lec.topic || "(제목 없음)" }),
         el("div", { class: "meta", text: `${fmtDate(lec.createdAt)} · 전체 ${s.total}쪽 중 ${s.withNotes}쪽 설명 있음` })
       );
-      listWrap.appendChild(card);
+      const renameBtn = el("button", {
+        class: "rename-btn", text: "이름 변경", "aria-label": "제목 변경",
+        onclick: () => renameLecture(lec, renderList)
+      });
+      listWrap.appendChild(el("div", { class: "card lecture-card" }, body, renameBtn));
     }
   }
   renderList();
+}
+
+// 강의 제목 변경 — 목록과 열람 화면에서 공용으로 쓴다
+function renameLecture(lec, after) {
+  showModal(box => {
+    box.appendChild(el("h2", { text: "제목 변경" }));
+    box.appendChild(el("p", { text: "이 강의의 주제를 새로 입력하세요." }));
+    const input = el("input", { type: "text", value: lec.topic || "" });
+    box.appendChild(input);
+    const save = () => {
+      const v = input.value.trim();
+      if (!v) { toast("제목을 입력하세요"); input.focus(); return; }
+      closeModal();
+      if (v === lec.topic) return;
+      lec.topic = v;
+      persistLectures();
+      toast("제목을 바꿨습니다");
+      if (after) after(); else render();
+    };
+    input.addEventListener("keydown", e => { if (e.key === "Enter") save(); });
+    box.appendChild(el("button", { class: "btn btn-primary", text: "저장", style: "margin-top:12px", onclick: save }));
+    box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+    setTimeout(() => { input.focus(); input.select(); }, 50);
+  });
 }
 
 /* ============================================================
@@ -797,7 +878,15 @@ function renderNew(root) {
   seg.appendChild(bSkip);
   card1.appendChild(seg);
 
-  card1.appendChild(el("label", { class: "field-label", text: "녹음 스크립트 (선택)" }));
+  card1.appendChild(el("label", { class: "field-label", text: "녹음 스크립트" }));
+  const scriptArea = el("textarea", {
+    class: "script-area",
+    placeholder: "녹음 스크립트를 붙여넣으세요. 비워두면 Claude 앱에서 파일로 첨부하면 됩니다.",
+    oninput: e => { state.script = e.target.value; syncScriptUI(); }
+  });
+  scriptArea.value = state.script;
+  card1.appendChild(scriptArea);
+
   const scriptInput = el("input", { type: "file", accept: ".txt,.md,.srt,.vtt,text/plain", hidden: "" });
   scriptInput.addEventListener("change", () => {
     const file = scriptInput.files && scriptInput.files[0];
@@ -806,34 +895,37 @@ function renderNew(root) {
     file.arrayBuffer().then(buf => {
       const text = cleanTranscript(file.name, decodeTextFile(buf));
       if (!text) { toast("파일에서 텍스트를 읽지 못했습니다"); return; }
-      state.script = { name: file.name, text };
+      state.script = text;
+      scriptArea.value = text;
       syncScriptUI();
-      toast("스크립트가 프롬프트에 포함됩니다");
+      toast(`${file.name} 불러옴`);
     }).catch(() => toast("파일을 읽지 못했습니다"));
   });
   card1.appendChild(scriptInput);
-  const scriptBtn = el("button", {
-    class: "btn btn-ghost", style: "width:100%",
+
+  const scriptRow = el("div", { class: "script-row" });
+  scriptRow.appendChild(el("button", {
+    class: "btn btn-ghost btn-sm", text: "파일에서 불러오기",
     onclick: () => scriptInput.click()
+  }));
+  const scriptClear = el("button", {
+    class: "btn btn-ghost btn-sm", text: "지우기",
+    onclick: () => { state.script = ""; scriptArea.value = ""; syncScriptUI(); toast("스크립트를 지웠습니다"); }
   });
-  card1.appendChild(scriptBtn);
-  const scriptChip = el("div", { class: "script-chip" });
-  card1.appendChild(scriptChip);
+  scriptRow.appendChild(scriptClear);
+  const scriptCount = el("span", { class: "script-count" });
+  scriptRow.appendChild(scriptCount);
+  card1.appendChild(scriptRow);
+
   const hintEl = el("p", { class: "hint" });
 
   function syncScriptUI() {
-    scriptChip.textContent = "";
-    if (state.script) {
-      scriptChip.classList.add("on");
-      scriptChip.appendChild(el("span", { class: "name", text: `📄 ${state.script.name} · ${state.script.text.length.toLocaleString("ko-KR")}자` }));
-      scriptChip.appendChild(el("button", { text: "빼기", onclick: () => { state.script = null; syncScriptUI(); toast("스크립트를 뺐습니다"); } }));
-      scriptBtn.textContent = "다른 스크립트 파일로 바꾸기";
-      hintEl.textContent = "스크립트가 프롬프트에 포함됩니다. Claude 앱에 붙여넣고 강의안 PDF만 첨부하세요.";
-    } else {
-      scriptChip.classList.remove("on");
-      scriptBtn.textContent = "스크립트 파일 올리기 (.txt)";
-      hintEl.textContent = "Claude 앱에 붙여넣고 강의안 PDF와 스크립트를 함께 첨부하세요.";
-    }
+    const has = state.script.trim().length > 0;
+    scriptClear.style.display = has ? "" : "none";
+    scriptCount.textContent = has ? `${state.script.trim().length.toLocaleString("ko-KR")}자` : "";
+    hintEl.textContent = has
+      ? "스크립트가 프롬프트에 포함됩니다. Claude 앱에 붙여넣고 강의안 PDF만 첨부하세요."
+      : "Claude 앱에 붙여넣고 강의안 PDF와 스크립트를 함께 첨부하세요.";
   }
 
   const copyBtn = el("button", {
@@ -841,7 +933,7 @@ function renderNew(root) {
     onclick: () => {
       const topic = state.topic.trim();
       if (!topic) { toast("주제를 먼저 입력하세요"); topicInput.focus(); return; }
-      copyText(buildPrompt(topic, state.correct, state.script && state.script.text), "프롬프트 복사됨");
+      copyText(buildPrompt(topic, state.correct, state.script.trim()), "프롬프트 복사됨");
     }
   });
   card1.appendChild(copyBtn);
@@ -963,6 +1055,10 @@ function renderLecture(root) {
   root.appendChild(el("p", { class: "hint", style: "margin:4px 0 14px", text: `${fmtDate(lec.createdAt)} · 전체 ${s.total}쪽 중 ${s.withNotes}쪽 설명 있음` }));
 
   const actionRow = el("div", { class: "row-gap", style: "margin-bottom:16px" });
+  actionRow.appendChild(el("button", {
+    class: "btn btn-ghost", text: "제목 변경",
+    onclick: () => renameLecture(lec)
+  }));
   actionRow.appendChild(el("button", {
     class: "btn btn-ghost", text: "노트 내려받기",
     onclick: async () => {
