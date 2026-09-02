@@ -168,9 +168,26 @@
   }
   .sort-chip.on { background: var(--blue); border-color: var(--blue); color: #fff; }
 
-  /* 목록 카드 안의 제목 변경 버튼 */
+  /* 폴더 */
+  .folder-row { margin-bottom: 8px; }
+  .chip-count { margin-left: 6px; opacity: .65; font-variant-numeric: tabular-nums; }
+  .sort-chip.add-chip { border-style: dashed; }
+  .folder-tag { font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 2px; }
+  .folder-tools { display: flex; gap: 14px; margin: -4px 0 12px 4px; }
+  .link-btn {
+    background: none; border: none; padding: 0;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    color: var(--text-sub); cursor: pointer;
+  }
+  .link-btn.danger { color: var(--danger); }
+  .folder-new-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .folder-new-row input { flex: 1; min-width: 0; }
+  /* 모달 안의 .btn 은 전체 너비라 이 줄에서만 되돌린다 (.modal .btn 보다 구체적이어야 함) */
+  .modal .folder-new-row .btn { width: auto; flex-shrink: 0; margin-bottom: 0; }
+
+  /* 목록 카드와 편집 버튼 */
   .lecture-card { display: flex; align-items: flex-start; gap: 10px; }
-  .lecture-body { flex: 1; min-width: 0; }
+  .lecture-body { flex: 1; min-width: 0; cursor: pointer; }
   .rename-btn {
     flex-shrink: 0;
     border: 1px solid var(--border);
@@ -186,7 +203,6 @@
   }
 
   /* 강의 카드 (홈) */
-  .lecture-body { cursor: pointer; }
   .lecture-card .topic { font-size: 16px; font-weight: 800; margin-bottom: 4px; overflow-wrap: anywhere; }
   .lecture-card .meta { font-size: 13px; color: var(--text-sub); }
   .empty-state {
@@ -386,6 +402,7 @@
    ============================================================ */
 const STORE_KEY = "lectures_v1";
 const SORT_KEY = "lectures_sort_v1";
+const FOLDERS_KEY = "lectures_folders_v1";
 
 function loadLectures() {
   try {
@@ -399,6 +416,20 @@ function loadLectures() {
 }
 
 let lectures = loadLectures();
+
+function loadFolders() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(FOLDERS_KEY) || "[]");
+    return Array.isArray(arr) ? arr.filter(x => typeof x === "string" && x.trim()) : [];
+  } catch (e) {
+    return [];
+  }
+}
+let folders = loadFolders();
+
+function persistFolders() {
+  try { localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders)); } catch (e) { /* 무시 */ }
+}
 
 function persistLectures() {
   try {
@@ -732,6 +763,32 @@ function fmtDate(iso) {
   return d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
 }
 
+
+/* ============================================================
+   폴더 — 강의 객체의 folder 속성(없으면 미분류)으로 분류한다
+   ============================================================ */
+function allFolders() {
+  const out = folders.filter(f => f && f.trim());
+  for (const l of lectures) {
+    const f = (l.folder || "").trim();
+    if (f && !out.includes(f)) out.push(f);
+  }
+  return out;
+}
+
+function folderCount(name) {
+  return lectures.filter(l => (l.folder || "") === name).length;
+}
+
+function addFolder(name) {
+  name = name.trim();
+  if (name && !folders.includes(name)) {
+    folders.push(name);
+    persistFolders();
+  }
+  return name;
+}
+
 function lectureStats(lec) {
   const total = lec.pages.length;
   const withNotes = lec.pages.filter(p => (p.notes && p.notes.length) || (p.extra && p.extra.length)).length;
@@ -758,7 +815,7 @@ function downloadFile(name, content, mime) {
    백업 / 복원
    ============================================================ */
 function backupPayload() {
-  return { app: "lecture-organizer", version: 1, exportedAt: new Date().toISOString(), lectures };
+  return { app: "lecture-organizer", version: 2, exportedAt: new Date().toISOString(), folders, lectures };
 }
 
 function doBackup() {
@@ -779,10 +836,14 @@ document.getElementById("restoreFile").addEventListener("change", function () {
   const reader = new FileReader();
   reader.onload = () => {
     let incoming = null;
+    let incomingFolders = [];
     try {
       const data = JSON.parse(reader.result);
       if (Array.isArray(data)) incoming = data;
-      else if (data && Array.isArray(data.lectures)) incoming = data.lectures;
+      else if (data && Array.isArray(data.lectures)) {
+        incoming = data.lectures;
+        if (Array.isArray(data.folders)) incomingFolders = data.folders.filter(x => typeof x === "string" && x.trim());
+      }
     } catch (e) { /* 아래에서 처리 */ }
     if (!incoming) { toast("올바른 백업 파일이 아닙니다"); return; }
     incoming = incoming.filter(l => l && typeof l === "object" && Array.isArray(l.pages));
@@ -793,11 +854,11 @@ document.getElementById("restoreFile").addEventListener("change", function () {
       box.appendChild(el("p", { text: `파일에 강의 ${incoming.length}개가 있습니다. 현재 저장된 강의는 ${lectures.length}개입니다.` }));
       box.appendChild(el("button", {
         class: "btn btn-primary", text: "병합 (기존 데이터 유지 + 추가)",
-        onclick: () => { applyRestore(incoming, false); }
+        onclick: () => { applyRestore(incoming, false, incomingFolders); }
       }));
       box.appendChild(el("button", {
         class: "btn btn-danger", text: "덮어쓰기 (기존 데이터 삭제)",
-        onclick: () => { applyRestore(incoming, true); }
+        onclick: () => { applyRestore(incoming, true, incomingFolders); }
       }));
       box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
     });
@@ -806,16 +867,20 @@ document.getElementById("restoreFile").addEventListener("change", function () {
   reader.readAsText(file);
 });
 
-function applyRestore(incoming, overwrite) {
+function applyRestore(incoming, overwrite, incomingFolders) {
   closeModal();
+  for (const f of (incomingFolders || [])) if (!folders.includes(f)) folders.push(f);
   if (overwrite) {
     lectures = incoming;
+    folders = (incomingFolders || []).slice();
   } else {
     const map = new Map(lectures.map(l => [l.id, l]));
     for (const l of incoming) map.set(l.id || crypto.randomUUID(), { ...l, id: l.id || crypto.randomUUID() });
     lectures = [...map.values()];
   }
+  persistFolders();
   if (persistLectures()) {
+    state.folder = null;
     toast(overwrite ? "덮어쓰기 완료" : "병합 완료");
     state.view = "home";
     render();
@@ -868,7 +933,8 @@ const state = {
   chunks: [],
   draft: "",             // textarea 내용
   parseResult: null,     // parseChunks 결과
-  collapsed: new Set(),  // 열람 화면에서 접힌 페이지 번호
+  collapsed: new Set(),
+  folder: null,          // 목록 폴더 필터 (null=전체, ""=미분류)
   sort: loadSort()       // 목록 정렬 기준
 };
 
@@ -947,7 +1013,119 @@ function renderHome(root) {
   const newBtn = el("button", { class: "btn btn-primary", text: "+ 새 강의", onclick: () => go("new") });
   root.appendChild(el("div", { style: "margin-bottom:16px" }, newBtn));
 
-  const sortRow = el("div", { class: "sort-row" });
+  // 폴더 줄 — 전체 / 각 폴더 / 미분류 / + 폴더
+  const folderRow = el("div", { class: "sort-row folder-row" });
+  root.appendChild(folderRow);
+  const folderTools = el("div", { class: "folder-tools" });
+  root.appendChild(folderTools);
+
+  const refreshAll = () => { renderFolderRow(); renderFolderTools(); renderList(); };
+
+  function folderChip(label, value, count) {
+    const chip = el("button", {
+      class: "sort-chip" + (state.folder === value ? " on" : ""),
+      onclick: () => { state.folder = value; refreshAll(); }
+    });
+    chip.appendChild(document.createTextNode(label));
+    chip.appendChild(el("span", { class: "chip-count", text: String(count) }));
+    return chip;
+  }
+
+  function renderFolderRow() {
+    folderRow.textContent = "";
+    folderRow.appendChild(folderChip("전체", null, lectures.length));
+    const list = allFolders();
+    for (const f of list) folderRow.appendChild(folderChip("\u{1F4C1} " + f, f, folderCount(f)));
+    // 폴더를 하나도 안 만들었으면 모든 강의가 미분류라 칩이 의미 없다
+    const loose = folderCount("");
+    if (list.length && (loose > 0 || state.folder === "")) folderRow.appendChild(folderChip("미분류", "", loose));
+    folderRow.appendChild(el("button", { class: "sort-chip add-chip", text: "+ 폴더", onclick: newFolderPrompt }));
+  }
+
+  // 특정 폴더를 보고 있을 때만 폴더 자체를 관리하는 줄을 띄운다
+  function renderFolderTools() {
+    folderTools.textContent = "";
+    if (!state.folder) return;
+    const name = state.folder;
+    folderTools.appendChild(el("button", { class: "link-btn", text: "폴더 이름 변경", onclick: () => renameFolderPrompt(name) }));
+    folderTools.appendChild(el("button", { class: "link-btn danger", text: "폴더 삭제", onclick: () => deleteFolderPrompt(name) }));
+  }
+
+  function newFolderPrompt() {
+    showModal(box => {
+      box.appendChild(el("h2", { text: "새 폴더" }));
+      box.appendChild(el("p", { text: "폴더 이름을 입력하세요. 강의 카드의 [편집]에서 이 폴더로 옮길 수 있습니다." }));
+      const input = el("input", { type: "text", placeholder: "예: 미생물학" });
+      box.appendChild(input);
+      const save = () => {
+        const v = input.value.trim();
+        if (!v) { toast("폴더 이름을 입력하세요"); input.focus(); return; }
+        if (allFolders().includes(v)) { toast("같은 이름의 폴더가 이미 있습니다"); input.focus(); return; }
+        addFolder(v);
+        closeModal();
+        state.folder = v;
+        toast("'" + v + "' 폴더를 만들었습니다");
+        refreshAll();
+      };
+      input.addEventListener("keydown", e => { if (e.key === "Enter") save(); });
+      box.appendChild(el("button", { class: "btn btn-primary", text: "만들기", style: "margin-top:12px", onclick: save }));
+      box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+      setTimeout(() => input.focus(), 50);
+    });
+  }
+
+  function renameFolderPrompt(name) {
+    showModal(box => {
+      box.appendChild(el("h2", { text: "폴더 이름 변경" }));
+      box.appendChild(el("p", { text: "'" + name + "' 폴더의 새 이름을 입력하세요." }));
+      const input = el("input", { type: "text", value: name });
+      box.appendChild(input);
+      const save = () => {
+        const v = input.value.trim();
+        if (!v) { toast("폴더 이름을 입력하세요"); input.focus(); return; }
+        if (v !== name && allFolders().includes(v)) { toast("같은 이름의 폴더가 이미 있습니다"); input.focus(); return; }
+        closeModal();
+        if (v === name) return;
+        folders = folders.map(f => (f === name ? v : f));
+        if (!folders.includes(v)) folders.push(v);
+        persistFolders();
+        for (const l of lectures) if ((l.folder || "") === name) l.folder = v;
+        persistLectures();
+        state.folder = v;
+        toast("폴더 이름을 바꿨습니다");
+        refreshAll();
+      };
+      input.addEventListener("keydown", e => { if (e.key === "Enter") save(); });
+      box.appendChild(el("button", { class: "btn btn-primary", text: "저장", style: "margin-top:12px", onclick: save }));
+      box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+      setTimeout(() => { input.focus(); input.select(); }, 50);
+    });
+  }
+
+  // 폴더만 없애고 강의는 미분류로 남긴다 — 강의는 절대 지우지 않는다
+  function deleteFolderPrompt(name) {
+    const n = folderCount(name);
+    showModal(box => {
+      box.appendChild(el("h2", { text: "폴더 삭제" }));
+      box.appendChild(el("p", { text: "'" + name + "' 폴더를 없앱니다. 이 폴더에 있던 강의 " + n + "개는 지워지지 않고 미분류로 이동합니다." }));
+      box.appendChild(el("button", {
+        class: "btn btn-danger", text: "폴더만 삭제",
+        onclick: () => {
+          closeModal();
+          folders = folders.filter(f => f !== name);
+          persistFolders();
+          for (const l of lectures) if ((l.folder || "") === name) delete l.folder;
+          persistLectures();
+          state.folder = null;
+          toast("폴더를 삭제했습니다 (강의는 그대로 있습니다)");
+          refreshAll();
+        }
+      }));
+      box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+    });
+  }
+
+  const sortRow = el("div", { class: "sort-row sort-by" });
   for (const s of SORTS) {
     const chip = el("button", {
       class: "sort-chip" + (state.sort === s.key ? " on" : ""),
@@ -972,47 +1150,93 @@ function renderHome(root) {
     const q = state.search.trim().toLowerCase();
     const cmp = (SORTS.find(s => s.key === state.sort) || SORTS[0]).cmp;
     const filtered = lectures
+      .filter(l => state.folder === null || (l.folder || "") === state.folder)
       .filter(l => !q || (l.topic || "").toLowerCase().includes(q))
       .sort(cmp);
     if (filtered.length === 0) {
-      listWrap.appendChild(el("div", { class: "empty-state", text: lectures.length === 0 ? "아직 저장된 강의가 없습니다.\n[+ 새 강의]로 시작하세요." : "검색 결과가 없습니다." }));
+      let msg;
+      if (lectures.length === 0) msg = "아직 저장된 강의가 없습니다.\n[+ 새 강의]로 시작하세요.";
+      else if (q) msg = "검색 결과가 없습니다.";
+      else if (state.folder) msg = "이 폴더에 강의가 없습니다.\n강의 카드의 [편집]에서 옮길 수 있습니다.";
+      else msg = "미분류 강의가 없습니다.";
+      listWrap.appendChild(el("div", { class: "empty-state", text: msg }));
       return;
     }
     for (const lec of filtered) {
       const s = lectureStats(lec);
-      const body = el("div", { class: "lecture-body", onclick: () => go("lecture", lec.id) },
-        el("div", { class: "topic", text: lec.topic || "(제목 없음)" }),
-        el("div", { class: "meta", text: `${fmtDate(lec.createdAt)} · 전체 ${s.total}쪽 중 ${s.withNotes}쪽 설명 있음` })
-      );
-      const renameBtn = el("button", {
-        class: "rename-btn", text: "이름 변경", "aria-label": "제목 변경",
-        onclick: () => renameLecture(lec, renderList)
+      const body = el("div", { class: "lecture-body", onclick: () => go("lecture", lec.id) });
+      if (lec.folder) body.appendChild(el("div", { class: "folder-tag", text: "\u{1F4C1} " + lec.folder }));
+      body.appendChild(el("div", { class: "topic", text: lec.topic || "(제목 없음)" }));
+      body.appendChild(el("div", { class: "meta", text: `${fmtDate(lec.createdAt)} · 전체 ${s.total}쪽 중 ${s.withNotes}쪽 설명 있음` }));
+      const editBtn = el("button", {
+        class: "rename-btn", text: "편집", "aria-label": "제목과 폴더 편집",
+        onclick: () => editLecture(lec, refreshAll)
       });
-      listWrap.appendChild(el("div", { class: "card lecture-card" }, body, renameBtn));
+      listWrap.appendChild(el("div", { class: "card lecture-card" }, body, editBtn));
     }
   }
+  renderFolderRow();
+  renderFolderTools();
   renderList();
 }
 
-// 강의 제목 변경 — 목록과 열람 화면에서 공용으로 쓴다
-function renameLecture(lec, after) {
+// 강의 제목·폴더 편집 — 목록과 열람 화면에서 공용으로 쓴다
+function editLecture(lec, after) {
   showModal(box => {
-    box.appendChild(el("h2", { text: "제목 변경" }));
-    box.appendChild(el("p", { text: "이 강의의 주제를 새로 입력하세요." }));
+    box.appendChild(el("h2", { text: "강의 편집" }));
+
+    box.appendChild(el("label", { class: "field-label", style: "margin-top:12px", text: "제목" }));
     const input = el("input", { type: "text", value: lec.topic || "" });
     box.appendChild(input);
+
+    box.appendChild(el("label", { class: "field-label", text: "폴더" }));
+    let picked = lec.folder || "";
+    const pickRow = el("div", { class: "sort-row" });
+    box.appendChild(pickRow);
+
+    function renderPick() {
+      pickRow.textContent = "";
+      const mk = (label, value) => el("button", {
+        class: "sort-chip" + (picked === value ? " on" : ""),
+        text: label,
+        onclick: () => { picked = value; renderPick(); }
+      });
+      pickRow.appendChild(mk("미분류", ""));
+      for (const f of allFolders()) pickRow.appendChild(mk("\u{1F4C1} " + f, f));
+    }
+    renderPick();
+
+    const newRow = el("div", { class: "folder-new-row" });
+    const newInput = el("input", { type: "text", placeholder: "새 폴더 이름" });
+    newRow.appendChild(newInput);
+    const addBtn = el("button", {
+      class: "btn btn-ghost btn-sm", text: "폴더 추가",
+      onclick: () => {
+        const v = newInput.value.trim();
+        if (!v) { toast("폴더 이름을 입력하세요"); newInput.focus(); return; }
+        addFolder(v);
+        picked = v;
+        newInput.value = "";
+        renderPick();
+        toast("'" + v + "' 폴더 추가됨");
+      }
+    });
+    newRow.appendChild(addBtn);
+    box.appendChild(newRow);
+
     const save = () => {
       const v = input.value.trim();
       if (!v) { toast("제목을 입력하세요"); input.focus(); return; }
       closeModal();
-      if (v === lec.topic) return;
       lec.topic = v;
+      if (picked) lec.folder = picked; else delete lec.folder;
       persistLectures();
-      toast("제목을 바꿨습니다");
+      toast("저장했습니다");
       if (after) after(); else render();
     };
     input.addEventListener("keydown", e => { if (e.key === "Enter") save(); });
-    box.appendChild(el("button", { class: "btn btn-primary", text: "저장", style: "margin-top:12px", onclick: save }));
+    newInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addBtn.click(); } });
+    box.appendChild(el("button", { class: "btn btn-primary", text: "저장", style: "margin-top:16px", onclick: save }));
     box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
     setTimeout(() => { input.focus(); input.select(); }, 50);
   });
@@ -1192,6 +1416,7 @@ function renderNew(root) {
 
     let msg = `${r.total}쪽 파싱됨, 그중 ${r.withNotes}쪽 설명 있음`;
     if (r.skipped) msg += ` (형식이 잘못된 항목 ${r.skipped}개는 제외)`;
+    if (state.folder) msg += ` \u00b7 '${state.folder}' 폴더에 저장됩니다`;
     parseArea.appendChild(el("div", { class: "parse-ok", text: msg }));
 
     parseArea.appendChild(el("button", {
@@ -1205,6 +1430,7 @@ function renderNew(root) {
           createdAt: new Date().toISOString(),
           pages: r.pages
         };
+        if (state.folder) lec.folder = state.folder;
         lectures.push(lec);
         if (persistLectures()) {
           toast("저장됨");
@@ -1235,8 +1461,8 @@ function renderLecture(root) {
 
   const actionRow = el("div", { class: "row-gap", style: "margin-bottom:16px" });
   actionRow.appendChild(el("button", {
-    class: "btn btn-ghost", text: "제목 변경",
-    onclick: () => renameLecture(lec)
+    class: "btn btn-ghost", text: "편집",
+    onclick: () => editLecture(lec)
   }));
   actionRow.appendChild(el("button", {
     class: "btn btn-ghost", text: "노트 내려받기",
