@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>강의 복습 노트</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root {
+    --bg: #F2F4F6;
+    --card: #FFFFFF;
+    --blue: #3182F6;
+    --blue-soft: #E8F1FE;
+    --emph-bg: #FFF7E6;
+    --gray-bg: #F2F4F6;
+    --text: #191F28;
+    --text-sub: #6B7684;
+    --border: #E5E8EB;
+    --danger: #F04452;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+      system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo",
+      "Noto Sans KR", "Malgun Gothic", sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    padding-bottom: 60px;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  h1 { font-size: 22px; font-weight: 800; }
+  h2 { font-size: 18px; font-weight: 800; }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .topbar .actions { display: flex; gap: 8px; }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: opacity .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { opacity: .75; }
+  .btn-primary { background: var(--blue); color: #fff; width: 100%; }
+  .btn-ghost {
+    background: #fff;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-sm { padding: 8px 12px; font-size: 13px; border-radius: 10px; }
+  .btn-danger { background: #fff; color: var(--danger); border: 1px solid var(--border); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  input[type="text"], textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: 15px;
+    background: #fff;
+    color: var(--text);
+  }
+  input[type="text"]:focus, textarea:focus {
+    outline: 2px solid var(--blue);
+    outline-offset: -1px;
+  }
+  textarea { min-height: 160px; resize: vertical; line-height: 1.6; }
+  label.field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-sub);
+    margin: 16px 0 6px;
+  }
+  .hint { font-size: 13px; color: var(--text-sub); margin-top: 8px; }
+
+  /* 세그먼트 버튼 */
+  .segment {
+    display: flex;
+    background: var(--bg);
+    border-radius: 14px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .segment button {
+    flex: 1;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 8px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    background: transparent;
+    color: var(--text-sub);
+    cursor: pointer;
+  }
+  .segment button.on {
+    background: var(--blue);
+    color: #fff;
+    box-shadow: 0 1px 4px rgba(49,130,246,.4);
+  }
+
+  /* 녹음 스크립트 입력 */
+  .script-area { min-height: 110px; font-size: 14px; }
+  .script-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .script-count {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--blue);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 목록 정렬 */
+  .sort-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sort-chip {
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-sub);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sort-chip.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  /* 폴더 */
+  .folder-row { margin-bottom: 8px; }
+  .chip-count { margin-left: 6px; opacity: .65; font-variant-numeric: tabular-nums; }
+  .sort-chip.add-chip { border-style: dashed; }
+  .folder-tag { font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 2px; }
+  .folder-tools { display: flex; gap: 14px; margin: -4px 0 12px 4px; }
+  .link-btn {
+    background: none; border: none; padding: 0;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    color: var(--text-sub); cursor: pointer;
+  }
+  .link-btn.danger { color: var(--danger); }
+  .folder-new-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .folder-new-row input { flex: 1; min-width: 0; }
+  .folder-new-row .btn { flex-shrink: 0; }
+  /* 모달 안의 .btn 은 전체 너비라 이 줄에서만 되돌린다 (.modal .btn 보다 구체적이어야 함) */
+  .modal .folder-new-row .btn { width: auto; flex-shrink: 0; margin-bottom: 0; }
+
+  /* 목록 카드와 편집 버튼 */
+  .lecture-card { display: flex; align-items: flex-start; gap: 10px; }
+  .lecture-body { flex: 1; min-width: 0; cursor: pointer; }
+  .rename-btn {
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-sub);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 강의 카드 (홈) */
+  .lecture-card .topic { font-size: 16px; font-weight: 800; margin-bottom: 4px; overflow-wrap: anywhere; }
+  .lecture-card .meta { font-size: 13px; color: var(--text-sub); }
+  .empty-state {
+    text-align: center;
+    color: var(--text-sub);
+    padding: 48px 16px;
+    font-size: 14px;
+  }
+
+  /* 페이지 카드 (열람) */
+  .page-card { padding: 16px 20px; }
+  .page-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .page-head .title { font-weight: 800; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .page-head .chev { color: var(--text-sub); font-size: 12px; flex-shrink: 0; }
+  .badge {
+    background: var(--blue);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    border-radius: 8px;
+    padding: 2px 8px;
+    flex-shrink: 0;
+  }
+  .page-body { margin-top: 12px; }
+  .note {
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    overflow-wrap: anywhere;
+  }
+  .note.emphasis { background: var(--emph-bg); }
+  .note.excluded {
+    background: var(--gray-bg);
+    color: var(--text-sub);
+    text-decoration: line-through;
+  }
+  .extra-box {
+    background: var(--blue-soft);
+    border-left: 4px solid var(--blue);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-top: 10px;
+  }
+  .extra-box .extra-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--blue);
+    margin-bottom: 4px;
+  }
+  .extra-box div { overflow-wrap: anywhere; }
+  .flow-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .flow-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .flow-arrow { color: var(--text-sub); font-weight: 700; }
+  .page-empty {
+    border: 1.5px dashed var(--border);
+    border-radius: 14px;
+    padding: 8px 14px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--text-sub);
+    background: transparent;
+  }
+
+  /* 파싱 결과/오류 */
+  .parse-error {
+    background: #FFF0F1;
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--danger);
+    font-size: 14px;
+    margin-top: 10px;
+    overflow-wrap: anywhere;
+  }
+  .parse-ok {
+    background: #EAF8F1;
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: #1B7B4E;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+  .chunk-count {
+    display: inline-block;
+    background: var(--blue-soft);
+    color: var(--blue);
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 3px 12px;
+  }
+
+  /* 토스트 */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(25,31,40,.92);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 10px 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+    z-index: 100;
+    max-width: 90vw;
+    text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* 모달 */
+  .modal-back {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 50;
+  }
+  .modal {
+    background: #fff;
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px 32px;
+    width: 100%;
+    max-width: 720px;
+  }
+  .modal h2 { margin-bottom: 8px; }
+  .modal p { color: var(--text-sub); font-size: 14px; margin-bottom: 16px; }
+  .modal .btn { width: 100%; margin-bottom: 8px; }
+
+  /* 클립보드 폴백 */
+  .copy-fallback textarea { min-height: 120px; font-size: 13px; }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-sub);
+    cursor: pointer;
+    padding: 4px 0;
+    margin-bottom: 8px;
+  }
+  .device-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  }
+  .device-row .txt { font-size: 13px; color: var(--text-sub); flex: 1; }
+  .device-row .txt b { color: var(--text); }
+  .row-gap { display: flex; gap: 8px; }
+  .row-gap .btn { flex: 1; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="toast"></div>
+<input type="file" id="restoreFile" accept=".json,application/json" hidden>
+
+<script>
+"use strict";
+
+/* ============================================================
+   저장소
+   ============================================================ */
+const STORE_KEY = "lectures_v1";
+const SORT_KEY = "lectures_sort_v1";
+const FOLDERS_KEY = "lectures_folders_v1";
+
+function loadLectures() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+let lectures = loadLectures();
+
+function loadFolders() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(FOLDERS_KEY) || "[]");
+    return Array.isArray(arr) ? arr.filter(x => typeof x === "string" && x.trim()) : [];
+  } catch (e) {
+    return [];
+  }
+}
+let folders = loadFolders();
+
+function persistFolders() {
+  try { localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders)); } catch (e) { /* 무시 */ }
+}
+
+function persistLectures() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(lectures));
+  } catch (e) {
+    alert("저장 공간이 가득 찼습니다. [백업]으로 데이터를 내려받은 뒤 오래된 강의를 삭제하세요.");
+    return false;
+  }
+  writeDeviceFile(); // 기기 파일이 연결돼 있으면 자동 저장 (미지원/미연결 시 무시)
+  return true;
+}
+
+// 브라우저에 저장 데이터를 지우지 말라고 요청 (지원 브라우저에서 유지 확률을 높임)
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {});
+}
+
+/* ============================================================
+   기기 파일 자동 저장 (File System Access API — 지원 브라우저 한정)
+   ============================================================ */
+const supportsDeviceFile = "showSaveFilePicker" in window;
+let deviceFileHandle = null;
+let deviceStatus = supportsDeviceFile ? "연결 안 됨" : "";
+
+function idbOpen() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("lecture-organizer-kv", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbSet(key, val) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("kv", "readwrite");
+    tx.objectStore("kv").put(val, key);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function idbGet(key) {
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("kv");
+    const rq = tx.objectStore("kv").get(key);
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+
+async function restoreDeviceHandle() {
+  if (!supportsDeviceFile) return;
+  try {
+    const h = await idbGet("deviceFileHandle");
+    if (h) {
+      deviceFileHandle = h;
+      const perm = await h.queryPermission({ mode: "readwrite" });
+      deviceStatus = perm === "granted" ? "연결됨" : "연결됨 (저장 시 권한 확인)";
+      if (state.view === "home") render();
+    }
+  } catch (e) { /* 무시 */ }
+}
+
+async function connectDeviceFile() {
+  try {
+    deviceFileHandle = await window.showSaveFilePicker({
+      suggestedName: "강의노트-백업.json",
+      types: [{ description: "JSON", accept: { "application/json": [".json"] } }]
+    });
+    await idbSet("deviceFileHandle", deviceFileHandle).catch(() => {});
+    await writeDeviceFile(true);
+    toast("기기 파일에 연결됐습니다. 이후 자동으로 저장됩니다.");
+    render();
+  } catch (e) {
+    if (e && e.name !== "AbortError") toast("파일 연결에 실패했습니다.");
+  }
+}
+
+async function writeDeviceFile(fromGesture) {
+  if (!deviceFileHandle) return;
+  try {
+    let perm = await deviceFileHandle.queryPermission({ mode: "readwrite" });
+    if (perm !== "granted" && fromGesture) {
+      perm = await deviceFileHandle.requestPermission({ mode: "readwrite" });
+    }
+    if (perm !== "granted") {
+      deviceStatus = "권한 필요 — [기기 파일 연결]을 다시 누르세요";
+      return;
+    }
+    const w = await deviceFileHandle.createWritable();
+    await w.write(JSON.stringify(backupPayload(), null, 2));
+    await w.close();
+    deviceStatus = "기기 파일 저장됨 · " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+    if (state.view === "home") render();
+  } catch (e) {
+    deviceStatus = "기기 파일 저장 실패";
+  }
+}
+
+/* ============================================================
+   프롬프트 템플릿
+   ============================================================ */
+const CORRECT_STEP = `1단계 — 스크립트 교정: 스크립트는 음성 인식 결과라 오인식이 많다. 강의안에 실제로 등장하는 용어를 근거로 잘못 인식된 전문용어, 영어 용어, 숫자를 교정해라. 근거 없이 추측해서 고치지 말고, 애매하면 원문 뒤에 [확인 필요]를 붙여라. 교정 과정은 출력하지 말고 내부적으로만 수행해라.
+
+2단계 — 페이지별 정리: 강의안의 각 페이지에 대해 교수님이 스크립트에서 실제로 말한 내용만 정리해라.`;
+
+const SKIP_STEP = `스크립트는 교정 없이 그대로 사용해라.
+
+페이지별 정리: 강의안의 각 페이지에 대해 교수님이 스크립트에서 실제로 말한 내용만 정리해라.`;
+
+function buildPrompt(topic, correct, script) {
+  const source = script ? "아래에 붙인 녹음 스크립트" : "녹음 스크립트";
+  let prompt = `강의 주제는 "${topic}"이다. 첨부한 강의안 PDF와 ${source}로 복습 노트를 만들어줘.
+
+${correct ? CORRECT_STEP : SKIP_STEP}
+
+핵심 규칙:
+- 강의안에만 있고 교수님이 말하지 않은 내용은 절대 넣지 않는다
+- 스크립트에 해당 페이지 설명이 없으면 notes를 빈 배열로 둔다
+- 강의안의 모든 페이지를 각각 하나의 객체로 만든다 (1쪽부터 마지막 쪽까지 빠짐없이)
+- 표나 그림에 대한 교수님 설명도 포함한다
+- 모든 문장은 한국어 평서문 '이다'체로 쓰고 영어 전문용어는 영어 그대로 둔다
+
+출력 형식: 아래 JSON 배열 하나만 코드블록으로 출력해라. 다른 설명은 쓰지 마라.
+[{"page":숫자,"title":"페이지 제목","notes":[{"text":"교수님이 말한 내용 한 줄","label":"emphasis|normal|excluded"}],"extra":["강의안에 없는데 교수님이 덧붙인 내용"],"flow":["개념","흐름"]}]
+
+label 기준:
+- emphasis: 중요하다, 시험에 나온다, 꼭 알아야 한다며 강조하거나 반복한 내용
+- normal: 일반 설명
+- excluded: 넘어간다, 안 봐도 된다고 말한 내용
+
+flow는 교수님이 과정이나 순서를 설명했을 때만 3~6개 단어로 채우고, 아니면 빈 배열로 둬라.
+출력이 길어지면 잘리는 지점에서 멈추고, 내가 "이어서"라고 하면 잘린 지점부터 이어서 출력해라.`;
+  if (script) {
+    prompt += `
+
+--- 녹음 스크립트 시작 ---
+${script}
+--- 녹음 스크립트 끝 ---`;
+  }
+  return prompt;
+}
+
+// 한국어 녹음 스크립트는 EUC-KR로 저장된 경우가 있어 UTF-8 해석에 실패하면 EUC-KR로 다시 읽는다
+function decodeTextFile(buf) {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buf);
+  } catch (e) {
+    try { return new TextDecoder("euc-kr").decode(buf); }
+    catch (e2) { return new TextDecoder().decode(buf); }
+  }
+}
+
+// 자막 형식(srt/vtt)은 순번과 타임스탬프 줄을 걷어낸다
+function cleanTranscript(name, text) {
+  if (/\.(srt|vtt)$/i.test(name)) {
+    text = text
+      .replace(/^WEBVTT.*$/m, "")
+      .split("\n")
+      .filter(line => !/^\s*\d+\s*$/.test(line) && !/-->/.test(line))
+      .join("\n");
+  }
+  return text.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+const RETRY_PHRASE = "방금 출력을 지정한 JSON 형식에 맞게 다시 출력해줘";
+
+/* ============================================================
+   파싱
+   ============================================================ */
+function cleanChunk(text) {
+  // 코드블록 마커 제거
+  return text.replace(/```[a-zA-Z]*\n?/g, "").trim();
+}
+
+// 반환: { pages, total, withNotes } 또는 { incomplete: true } 또는 { error: "..." }
+function parseChunks(chunks) {
+  let s = chunks.map(cleanChunk).join("\n").trim();
+  if (!s) return { error: "붙여넣은 내용이 없습니다." };
+
+  const start = s.indexOf("[");
+  if (start === -1) {
+    return { error: "JSON 배열의 시작 기호 [ 를 찾지 못했습니다. Claude의 코드블록 출력 전체를 붙여넣었는지 확인하세요." };
+  }
+  s = s.slice(start);
+
+  const lastClose = s.lastIndexOf("]");
+  if (lastClose === -1) return { incomplete: true };
+
+  let arr = null;
+  let parseErr = null;
+  // 끝의 잡담을 걷어내기 위해 마지막 ] 위치에서 잘라 시도하고, 실패하면 전체로도 시도
+  for (const candidate of [s.slice(0, lastClose + 1), s]) {
+    try {
+      const v = JSON.parse(candidate);
+      if (Array.isArray(v)) { arr = v; break; }
+      parseErr = "최상위 값이 JSON 배열이 아닙니다.";
+    } catch (e) {
+      parseErr = e.message;
+    }
+  }
+
+  if (!arr) {
+    // ]로 끝나지 않으면 잘린 출력일 가능성이 높음
+    if (!/\]\s*$/.test(s)) return { incomplete: true };
+    return { error: "JSON 파싱 실패: " + parseErr };
+  }
+
+  // 원소 검증 + 보정
+  const byPage = new Map();
+  let skipped = 0;
+  for (const item of arr) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) { skipped++; continue; }
+    const page = Number(item.page);
+    if (!Number.isFinite(page)) { skipped++; continue; }
+
+    const notes = Array.isArray(item.notes) ? item.notes : [];
+    const fixedNotes = [];
+    for (const n of notes) {
+      if (n == null) continue;
+      if (typeof n === "string") { fixedNotes.push({ text: n, label: "normal" }); continue; }
+      if (typeof n !== "object") continue;
+      const text = typeof n.text === "string" ? n.text : String(n.text ?? "");
+      if (!text) continue;
+      const label = ["emphasis", "normal", "excluded"].includes(n.label) ? n.label : "normal";
+      fixedNotes.push({ text, label });
+    }
+
+    const extra = Array.isArray(item.extra) ? item.extra.filter(x => typeof x === "string" && x) : [];
+    const flow = Array.isArray(item.flow) ? item.flow.filter(x => typeof x === "string" && x) : [];
+    const title = typeof item.title === "string" ? item.title : "";
+
+    // 같은 page 중복 시 나중 것으로 덮어쓰기
+    byPage.set(page, { page, title, notes: fixedNotes, extra, flow });
+  }
+
+  if (byPage.size === 0) {
+    return { error: "유효한 페이지 객체가 하나도 없습니다. page 번호가 숫자인지 확인하세요." };
+  }
+
+  const pages = [...byPage.values()].sort((a, b) => a.page - b.page);
+  const withNotes = pages.filter(p => p.notes.length > 0 || p.extra.length > 0).length;
+  return { pages, total: pages.length, withNotes, skipped };
+}
+
+/* ============================================================
+   유틸
+   ============================================================ */
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  if (attrs) {
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") node.className = v;
+      else if (k === "onclick") node.addEventListener("click", v);
+      else if (k === "oninput") node.addEventListener("input", v);
+      else if (k === "text") node.textContent = v;
+      else node.setAttribute(k, v);
+    }
+  }
+  for (const c of children) {
+    if (c == null) continue;
+    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  return node;
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function copyText(text, okMsg) {
+  const ok = () => toast(okMsg || "복사됨");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(ok).catch(() => copyFallback(text));
+  } else {
+    copyFallback(text);
+  }
+}
+
+function copyFallback(text) {
+  // execCommand 시도 → 그래도 실패하면 직접 선택하도록 안내
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  ta.setSelectionRange(0, text.length);
+  let done = false;
+  try { done = document.execCommand("copy"); } catch (e) { done = false; }
+  document.body.removeChild(ta);
+  if (done) { toast("복사됨"); return; }
+
+  showModal(box => {
+    box.appendChild(el("h2", { text: "직접 복사해 주세요" }));
+    box.appendChild(el("p", { text: "자동 복사가 지원되지 않는 환경입니다. 아래 내용을 길게 눌러 전체 선택 후 복사하세요." }));
+    const wrap = el("div", { class: "copy-fallback" });
+    const t2 = el("textarea");
+    t2.value = text;
+    t2.setAttribute("readonly", "");
+    wrap.appendChild(t2);
+    box.appendChild(wrap);
+    box.appendChild(el("button", { class: "btn btn-ghost", text: "닫기", onclick: closeModal, style: "margin-top:12px" }));
+    setTimeout(() => { t2.focus(); t2.select(); }, 50);
+  });
+}
+
+let modalBack = null;
+function showModal(build) {
+  closeModal();
+  modalBack = el("div", { class: "modal-back", onclick: e => { if (e.target === modalBack) closeModal(); } });
+  const box = el("div", { class: "modal" });
+  build(box);
+  modalBack.appendChild(box);
+  document.body.appendChild(modalBack);
+}
+function closeModal() {
+  if (modalBack) { modalBack.remove(); modalBack = null; }
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  return d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+}
+
+
+/* ============================================================
+   폴더 — 강의 객체의 folder 속성(없으면 미분류)으로 분류한다
+   ============================================================ */
+function allFolders() {
+  const out = folders.filter(f => f && f.trim());
+  for (const l of lectures) {
+    const f = (l.folder || "").trim();
+    if (f && !out.includes(f)) out.push(f);
+  }
+  return out;
+}
+
+function folderCount(name) {
+  return lectures.filter(l => (l.folder || "") === name).length;
+}
+
+function addFolder(name) {
+  name = name.trim();
+  if (name && !folders.includes(name)) {
+    folders.push(name);
+    persistFolders();
+  }
+  return name;
+}
+
+function lectureStats(lec) {
+  const total = lec.pages.length;
+  const withNotes = lec.pages.filter(p => (p.notes && p.notes.length) || (p.extra && p.extra.length)).length;
+  return { total, withNotes };
+}
+
+function safeFileName(s) {
+  return (s || "강의노트").replace(/[\\/:*?"<>|]/g, "_").slice(0, 80);
+}
+
+function downloadFile(name, content, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
+/* ============================================================
+   백업 / 복원
+   ============================================================ */
+function backupPayload() {
+  return { app: "lecture-organizer", version: 2, exportedAt: new Date().toISOString(), folders, lectures };
+}
+
+function doBackup() {
+  if (lectures.length === 0) { toast("백업할 강의가 없습니다"); return; }
+  const date = new Date().toISOString().slice(0, 10);
+  downloadFile(`강의노트-백업-${date}.json`, JSON.stringify(backupPayload(), null, 2), "application/json");
+  toast("백업 파일을 내려받았습니다 (기기의 파일 앱에 저장하세요)");
+}
+
+function doRestore() {
+  document.getElementById("restoreFile").click();
+}
+
+document.getElementById("restoreFile").addEventListener("change", function () {
+  const file = this.files && this.files[0];
+  this.value = "";
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let incoming = null;
+    let incomingFolders = [];
+    try {
+      const data = JSON.parse(reader.result);
+      if (Array.isArray(data)) incoming = data;
+      else if (data && Array.isArray(data.lectures)) {
+        incoming = data.lectures;
+        if (Array.isArray(data.folders)) incomingFolders = data.folders.filter(x => typeof x === "string" && x.trim());
+      }
+    } catch (e) { /* 아래에서 처리 */ }
+    if (!incoming) { toast("올바른 백업 파일이 아닙니다"); return; }
+    incoming = incoming.filter(l => l && typeof l === "object" && Array.isArray(l.pages));
+    if (incoming.length === 0) { toast("백업 파일에 강의가 없습니다"); return; }
+
+    showModal(box => {
+      box.appendChild(el("h2", { text: "복원 방법 선택" }));
+      box.appendChild(el("p", { text: `파일에 강의 ${incoming.length}개가 있습니다. 현재 저장된 강의는 ${lectures.length}개입니다.` }));
+      box.appendChild(el("button", {
+        class: "btn btn-primary", text: "병합 (기존 데이터 유지 + 추가)",
+        onclick: () => { applyRestore(incoming, false, incomingFolders); }
+      }));
+      box.appendChild(el("button", {
+        class: "btn btn-danger", text: "덮어쓰기 (기존 데이터 삭제)",
+        onclick: () => { applyRestore(incoming, true, incomingFolders); }
+      }));
+      box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+    });
+  };
+  reader.onerror = () => toast("파일을 읽지 못했습니다");
+  reader.readAsText(file);
+});
+
+function applyRestore(incoming, overwrite, incomingFolders) {
+  closeModal();
+  for (const f of (incomingFolders || [])) if (!folders.includes(f)) folders.push(f);
+  if (overwrite) {
+    lectures = incoming;
+    folders = (incomingFolders || []).slice();
+  } else {
+    const map = new Map(lectures.map(l => [l.id, l]));
+    for (const l of incoming) map.set(l.id || crypto.randomUUID(), { ...l, id: l.id || crypto.randomUUID() });
+    lectures = [...map.values()];
+  }
+  persistFolders();
+  if (persistLectures()) {
+    state.folder = null;
+    toast(overwrite ? "덮어쓰기 완료" : "병합 완료");
+    state.view = "home";
+    render();
+  }
+}
+
+/* ============================================================
+   Markdown 내보내기
+   ============================================================ */
+function lectureToMarkdown(lec) {
+  const lines = [`# ${lec.topic}`, "", `저장일: ${fmtDate(lec.createdAt)}`, ""];
+  const emptyPages = [];
+  for (const p of lec.pages) {
+    const hasContent = (p.notes && p.notes.length) || (p.extra && p.extra.length);
+    if (!hasContent) { emptyPages.push(p); continue; }
+    lines.push(`## p.${p.page} ${p.title || ""}`.trim(), "");
+    for (const n of p.notes || []) {
+      if (n.label === "emphasis") lines.push(`- 🟡 **${n.text}**`);
+      else if (n.label === "excluded") lines.push(`- ⚪ ~~${n.text}~~`);
+      else lines.push(`- ${n.text}`);
+    }
+    if (p.extra && p.extra.length) {
+      lines.push("", "> 강의안에 없는 추가 설명:");
+      for (const x of p.extra) lines.push(`> - ${x}`);
+    }
+    if (p.flow && p.flow.length) {
+      lines.push("", `흐름: ${p.flow.join(" → ")}`);
+    }
+    lines.push("");
+  }
+  if (emptyPages.length) {
+    lines.push("---", "", "## 설명 없는 페이지", "");
+    for (const p of emptyPages) lines.push(`- p.${p.page} ${p.title || ""}`.trimEnd());
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+/* ============================================================
+   상태 & 라우팅
+   ============================================================ */
+const state = {
+  view: "home",          // home | new | lecture
+  search: "",
+  lectureId: null,
+  // 새 강의 화면
+  topic: "",
+  correct: false,        // 기본값: 건너뛰기
+  script: "",            // 붙여넣거나 파일에서 불러온 녹음 스크립트
+  chunks: [],
+  draft: "",             // textarea 내용
+  parseResult: null,     // parseChunks 결과
+  collapsed: new Set(),
+  folder: null,          // 목록 폴더 필터 (null=전체, ""=미분류)
+  newFolder: "",         // 새 강의를 저장할 폴더 ("" = 미분류)
+  sort: loadSort()       // 목록 정렬 기준
+};
+
+const SORTS = [
+  { key: "recent", label: "최신순", cmp: (a, b) => (b.createdAt || "").localeCompare(a.createdAt || "") },
+  { key: "oldest", label: "오래된순", cmp: (a, b) => (a.createdAt || "").localeCompare(b.createdAt || "") },
+  { key: "title", label: "가나다순", cmp: (a, b) => (a.topic || "").localeCompare(b.topic || "", "ko", { numeric: true, sensitivity: "base" }) },
+  { key: "notes", label: "설명 많은순", cmp: (a, b) => lectureStats(b).withNotes - lectureStats(a).withNotes }
+];
+
+function loadSort() {
+  try {
+    const v = localStorage.getItem(SORT_KEY);
+    return v && ["recent", "oldest", "title", "notes"].includes(v) ? v : "recent";
+  } catch (e) {
+    return "recent";
+  }
+}
+function saveSort(key) {
+  try { localStorage.setItem(SORT_KEY, key); } catch (e) { /* 무시 */ }
+}
+
+function go(view, id) {
+  state.view = view;
+  state.lectureId = id ?? null;
+  if (view === "new") {
+    state.topic = "";
+    state.correct = false;
+    state.script = "";
+    state.newFolder = state.folder || "";
+    state.chunks = [];
+    state.draft = "";
+    state.parseResult = null;
+  }
+  if (view === "lecture") state.collapsed = new Set();
+  render();
+  window.scrollTo(0, 0);
+}
+
+/* ============================================================
+   화면: 홈 (강의 목록)
+   ============================================================ */
+function renderHome(root) {
+  const top = el("div", { class: "topbar" },
+    el("h1", { text: "강의 복습 노트" }),
+    el("div", { class: "actions" },
+      el("button", { class: "btn btn-ghost btn-sm", text: "백업", onclick: doBackup }),
+      el("button", { class: "btn btn-ghost btn-sm", text: "복원", onclick: doRestore })
+    )
+  );
+  root.appendChild(top);
+
+  // 기기 저장 상태 줄
+  if (supportsDeviceFile) {
+    const row = el("div", { class: "device-row" },
+      el("div", { class: "txt" },
+        el("b", { text: "기기 저장 " }),
+        deviceStatus || "연결 안 됨"
+      ),
+      el("button", { class: "btn btn-ghost btn-sm", text: "기기 파일 연결", onclick: connectDeviceFile })
+    );
+    root.appendChild(row);
+  } else {
+    root.appendChild(el("div", { class: "device-row" },
+      el("div", { class: "txt", text: "이 브라우저(iPhone Safari 포함)는 파일 자동 저장을 지원하지 않습니다. 데이터는 브라우저에 저장되므로, [백업] 버튼으로 기기의 파일 앱에 주기적으로 저장해 두세요." })
+    ));
+  }
+
+  const search = el("input", {
+    type: "text",
+    placeholder: "주제 검색",
+    value: state.search,
+    oninput: e => { state.search = e.target.value; renderList(); }
+  });
+  root.appendChild(el("div", { style: "margin-bottom:12px" }, search));
+
+  const newBtn = el("button", { class: "btn btn-primary", text: "+ 새 강의", onclick: () => go("new") });
+  root.appendChild(el("div", { style: "margin-bottom:16px" }, newBtn));
+
+  // 폴더 줄 — 전체 / 각 폴더 / 미분류 / + 폴더
+  const folderRow = el("div", { class: "sort-row folder-row" });
+  root.appendChild(folderRow);
+  const folderTools = el("div", { class: "folder-tools" });
+  root.appendChild(folderTools);
+
+  const refreshAll = () => { renderFolderRow(); renderFolderTools(); renderList(); };
+
+  function folderChip(label, value, count) {
+    const chip = el("button", {
+      class: "sort-chip" + (state.folder === value ? " on" : ""),
+      onclick: () => { state.folder = value; refreshAll(); }
+    });
+    chip.appendChild(document.createTextNode(label));
+    chip.appendChild(el("span", { class: "chip-count", text: String(count) }));
+    return chip;
+  }
+
+  function renderFolderRow() {
+    folderRow.textContent = "";
+    folderRow.appendChild(folderChip("전체", null, lectures.length));
+    const list = allFolders();
+    for (const f of list) folderRow.appendChild(folderChip("\u{1F4C1} " + f, f, folderCount(f)));
+    // 폴더를 하나도 안 만들었으면 모든 강의가 미분류라 칩이 의미 없다
+    const loose = folderCount("");
+    if (list.length && (loose > 0 || state.folder === "")) folderRow.appendChild(folderChip("미분류", "", loose));
+    folderRow.appendChild(el("button", { class: "sort-chip add-chip", text: "+ 폴더", onclick: newFolderPrompt }));
+  }
+
+  // 특정 폴더를 보고 있을 때만 폴더 자체를 관리하는 줄을 띄운다
+  function renderFolderTools() {
+    folderTools.textContent = "";
+    if (!state.folder) return;
+    const name = state.folder;
+    folderTools.appendChild(el("button", { class: "link-btn", text: "폴더 이름 변경", onclick: () => renameFolderPrompt(name) }));
+    folderTools.appendChild(el("button", { class: "link-btn danger", text: "폴더 삭제", onclick: () => deleteFolderPrompt(name) }));
+  }
+
+  function newFolderPrompt() {
+    showModal(box => {
+      box.appendChild(el("h2", { text: "새 폴더" }));
+      box.appendChild(el("p", { text: "폴더 이름을 입력하세요. 강의 카드의 [편집]에서 이 폴더로 옮길 수 있습니다." }));
+      const input = el("input", { type: "text", placeholder: "예: 미생물학" });
+      box.appendChild(input);
+      const save = () => {
+        const v = input.value.trim();
+        if (!v) { toast("폴더 이름을 입력하세요"); input.focus(); return; }
+        if (allFolders().includes(v)) { toast("같은 이름의 폴더가 이미 있습니다"); input.focus(); return; }
+        addFolder(v);
+        closeModal();
+        state.folder = v;
+        toast("'" + v + "' 폴더를 만들었습니다");
+        refreshAll();
+      };
+      input.addEventListener("keydown", e => { if (e.key === "Enter") save(); });
+      box.appendChild(el("button", { class: "btn btn-primary", text: "만들기", style: "margin-top:12px", onclick: save }));
+      box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+      setTimeout(() => input.focus(), 50);
+    });
+  }
+
+  function renameFolderPrompt(name) {
+    showModal(box => {
+      box.appendChild(el("h2", { text: "폴더 이름 변경" }));
+      box.appendChild(el("p", { text: "'" + name + "' 폴더의 새 이름을 입력하세요." }));
+      const input = el("input", { type: "text", value: name });
+      box.appendChild(input);
+      const save = () => {
+        const v = input.value.trim();
+        if (!v) { toast("폴더 이름을 입력하세요"); input.focus(); return; }
+        if (v !== name && allFolders().includes(v)) { toast("같은 이름의 폴더가 이미 있습니다"); input.focus(); return; }
+        closeModal();
+        if (v === name) return;
+        folders = folders.map(f => (f === name ? v : f));
+        if (!folders.includes(v)) folders.push(v);
+        persistFolders();
+        for (const l of lectures) if ((l.folder || "") === name) l.folder = v;
+        persistLectures();
+        state.folder = v;
+        toast("폴더 이름을 바꿨습니다");
+        refreshAll();
+      };
+      input.addEventListener("keydown", e => { if (e.key === "Enter") save(); });
+      box.appendChild(el("button", { class: "btn btn-primary", text: "저장", style: "margin-top:12px", onclick: save }));
+      box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+      setTimeout(() => { input.focus(); input.select(); }, 50);
+    });
+  }
+
+  // 폴더만 없애고 강의는 미분류로 남긴다 — 강의는 절대 지우지 않는다
+  function deleteFolderPrompt(name) {
+    const n = folderCount(name);
+    showModal(box => {
+      box.appendChild(el("h2", { text: "폴더 삭제" }));
+      box.appendChild(el("p", { text: "'" + name + "' 폴더를 없앱니다. 이 폴더에 있던 강의 " + n + "개는 지워지지 않고 미분류로 이동합니다." }));
+      box.appendChild(el("button", {
+        class: "btn btn-danger", text: "폴더만 삭제",
+        onclick: () => {
+          closeModal();
+          folders = folders.filter(f => f !== name);
+          persistFolders();
+          for (const l of lectures) if ((l.folder || "") === name) delete l.folder;
+          persistLectures();
+          state.folder = null;
+          toast("폴더를 삭제했습니다 (강의는 그대로 있습니다)");
+          refreshAll();
+        }
+      }));
+      box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+    });
+  }
+
+  const sortRow = el("div", { class: "sort-row sort-by" });
+  for (const s of SORTS) {
+    const chip = el("button", {
+      class: "sort-chip" + (state.sort === s.key ? " on" : ""),
+      text: s.label,
+      onclick: () => {
+        state.sort = s.key;
+        saveSort(s.key);
+        for (const c of sortRow.children) c.classList.remove("on");
+        chip.classList.add("on");
+        renderList();
+      }
+    });
+    sortRow.appendChild(chip);
+  }
+  root.appendChild(sortRow);
+
+  const listWrap = el("div", { id: "lecture-list" });
+  root.appendChild(listWrap);
+
+  function renderList() {
+    listWrap.textContent = "";
+    const q = state.search.trim().toLowerCase();
+    const cmp = (SORTS.find(s => s.key === state.sort) || SORTS[0]).cmp;
+    const filtered = lectures
+      .filter(l => state.folder === null || (l.folder || "") === state.folder)
+      .filter(l => !q || (l.topic || "").toLowerCase().includes(q))
+      .sort(cmp);
+    if (filtered.length === 0) {
+      let msg;
+      if (lectures.length === 0) msg = "아직 저장된 강의가 없습니다.\n[+ 새 강의]로 시작하세요.";
+      else if (q) msg = "검색 결과가 없습니다.";
+      else if (state.folder) msg = "이 폴더에 강의가 없습니다.\n강의 카드의 [편집]에서 옮길 수 있습니다.";
+      else msg = "미분류 강의가 없습니다.";
+      listWrap.appendChild(el("div", { class: "empty-state", text: msg }));
+      return;
+    }
+    for (const lec of filtered) {
+      const s = lectureStats(lec);
+      const body = el("div", { class: "lecture-body", onclick: () => go("lecture", lec.id) });
+      if (lec.folder) body.appendChild(el("div", { class: "folder-tag", text: "\u{1F4C1} " + lec.folder }));
+      body.appendChild(el("div", { class: "topic", text: lec.topic || "(제목 없음)" }));
+      body.appendChild(el("div", { class: "meta", text: `${fmtDate(lec.createdAt)} · 전체 ${s.total}쪽 중 ${s.withNotes}쪽 설명 있음` }));
+      const editBtn = el("button", {
+        class: "rename-btn", text: "편집", "aria-label": "제목과 폴더 편집",
+        onclick: () => editLecture(lec, refreshAll)
+      });
+      listWrap.appendChild(el("div", { class: "card lecture-card" }, body, editBtn));
+    }
+  }
+  renderFolderRow();
+  renderFolderTools();
+  renderList();
+}
+
+// 강의 제목·폴더 편집 — 목록과 열람 화면에서 공용으로 쓴다
+function editLecture(lec, after) {
+  showModal(box => {
+    box.appendChild(el("h2", { text: "강의 편집" }));
+
+    box.appendChild(el("label", { class: "field-label", style: "margin-top:12px", text: "제목" }));
+    const input = el("input", { type: "text", value: lec.topic || "" });
+    box.appendChild(input);
+
+    box.appendChild(el("label", { class: "field-label", text: "폴더" }));
+    let picked = lec.folder || "";
+    const pickRow = el("div", { class: "sort-row" });
+    box.appendChild(pickRow);
+
+    function renderPick() {
+      pickRow.textContent = "";
+      const mk = (label, value) => el("button", {
+        class: "sort-chip" + (picked === value ? " on" : ""),
+        text: label,
+        onclick: () => { picked = value; renderPick(); }
+      });
+      pickRow.appendChild(mk("미분류", ""));
+      for (const f of allFolders()) pickRow.appendChild(mk("\u{1F4C1} " + f, f));
+    }
+    renderPick();
+
+    const newRow = el("div", { class: "folder-new-row" });
+    const newInput = el("input", { type: "text", placeholder: "새 폴더 이름" });
+    newRow.appendChild(newInput);
+    const addBtn = el("button", {
+      class: "btn btn-ghost btn-sm", text: "폴더 추가",
+      onclick: () => {
+        const v = newInput.value.trim();
+        if (!v) { toast("폴더 이름을 입력하세요"); newInput.focus(); return; }
+        addFolder(v);
+        picked = v;
+        newInput.value = "";
+        renderPick();
+        toast("'" + v + "' 폴더 추가됨");
+      }
+    });
+    newRow.appendChild(addBtn);
+    box.appendChild(newRow);
+
+    const save = () => {
+      const v = input.value.trim();
+      if (!v) { toast("제목을 입력하세요"); input.focus(); return; }
+      closeModal();
+      lec.topic = v;
+      if (picked) lec.folder = picked; else delete lec.folder;
+      persistLectures();
+      toast("저장했습니다");
+      if (after) after(); else render();
+    };
+    input.addEventListener("keydown", e => { if (e.key === "Enter") save(); });
+    newInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addBtn.click(); } });
+    box.appendChild(el("button", { class: "btn btn-primary", text: "저장", style: "margin-top:16px", onclick: save }));
+    box.appendChild(el("button", { class: "btn btn-ghost", text: "취소", onclick: closeModal }));
+    setTimeout(() => { input.focus(); input.select(); }, 50);
+  });
+}
+
+/* ============================================================
+   화면: 새 강의 / 프롬프트 생성
+   ============================================================ */
+function renderNew(root) {
+  root.appendChild(el("button", { class: "back-link", text: "‹ 목록으로", onclick: () => go("home") }));
+  root.appendChild(el("h1", { text: "새 강의", style: "margin-bottom:12px" }));
+
+  // --- 1. 프롬프트 만들기 카드 ---
+  const card1 = el("div", { class: "card" });
+  card1.appendChild(el("h2", { text: "1. 프롬프트 만들기" }));
+
+  card1.appendChild(el("label", { class: "field-label", text: "강의 주제" }));
+  const topicInput = el("input", {
+    type: "text",
+    placeholder: "예: 감염과 면역 – Enterobacteriaceae",
+    value: state.topic,
+    oninput: e => { state.topic = e.target.value; }
+  });
+  card1.appendChild(topicInput);
+
+  card1.appendChild(el("label", { class: "field-label", text: "스크립트 교정" }));
+  const seg = el("div", { class: "segment" });
+  const bCorrect = el("button", { text: "교정하기" });
+  const bSkip = el("button", { text: "건너뛰기" });
+  function syncSeg() {
+    bCorrect.className = state.correct ? "on" : "";
+    bSkip.className = state.correct ? "" : "on";
+  }
+  bCorrect.addEventListener("click", () => { state.correct = true; syncSeg(); });
+  bSkip.addEventListener("click", () => { state.correct = false; syncSeg(); });
+  syncSeg();
+  seg.appendChild(bCorrect);
+  seg.appendChild(bSkip);
+  card1.appendChild(seg);
+
+  card1.appendChild(el("label", { class: "field-label", text: "녹음 스크립트" }));
+  const scriptArea = el("textarea", {
+    class: "script-area",
+    placeholder: "녹음 스크립트를 붙여넣으세요. 비워두면 Claude 앱에서 파일로 첨부하면 됩니다.",
+    oninput: e => { state.script = e.target.value; syncScriptUI(); }
+  });
+  scriptArea.value = state.script;
+  card1.appendChild(scriptArea);
+
+  const scriptInput = el("input", { type: "file", accept: ".txt,.md,.srt,.vtt,text/plain", hidden: "" });
+  scriptInput.addEventListener("change", () => {
+    const file = scriptInput.files && scriptInput.files[0];
+    scriptInput.value = "";
+    if (!file) return;
+    file.arrayBuffer().then(buf => {
+      const text = cleanTranscript(file.name, decodeTextFile(buf));
+      if (!text) { toast("파일에서 텍스트를 읽지 못했습니다"); return; }
+      state.script = text;
+      scriptArea.value = text;
+      syncScriptUI();
+      toast(`${file.name} 불러옴`);
+    }).catch(() => toast("파일을 읽지 못했습니다"));
+  });
+  card1.appendChild(scriptInput);
+
+  const scriptRow = el("div", { class: "script-row" });
+  scriptRow.appendChild(el("button", {
+    class: "btn btn-ghost btn-sm", text: "파일에서 불러오기",
+    onclick: () => scriptInput.click()
+  }));
+  const scriptClear = el("button", {
+    class: "btn btn-ghost btn-sm", text: "지우기",
+    onclick: () => { state.script = ""; scriptArea.value = ""; syncScriptUI(); toast("스크립트를 지웠습니다"); }
+  });
+  scriptRow.appendChild(scriptClear);
+  const scriptCount = el("span", { class: "script-count" });
+  scriptRow.appendChild(scriptCount);
+  card1.appendChild(scriptRow);
+
+  const hintEl = el("p", { class: "hint" });
+
+  function syncScriptUI() {
+    const has = state.script.trim().length > 0;
+    scriptClear.style.display = has ? "" : "none";
+    scriptCount.textContent = has ? `${state.script.trim().length.toLocaleString("ko-KR")}자` : "";
+    hintEl.textContent = has
+      ? "스크립트가 프롬프트에 포함됩니다. Claude 앱에 붙여넣고 강의안 PDF만 첨부하세요."
+      : "Claude 앱에 붙여넣고 강의안 PDF와 스크립트를 함께 첨부하세요.";
+  }
+
+  const copyBtn = el("button", {
+    class: "btn btn-primary", text: "프롬프트 복사", style: "margin-top:16px",
+    onclick: () => {
+      const topic = state.topic.trim();
+      if (!topic) { toast("주제를 먼저 입력하세요"); topicInput.focus(); return; }
+      copyText(buildPrompt(topic, state.correct, state.script.trim()), "프롬프트 복사됨");
+    }
+  });
+  card1.appendChild(copyBtn);
+  card1.appendChild(hintEl);
+  syncScriptUI();
+  root.appendChild(card1);
+
+  // --- 2. 결과 붙여넣기 카드 ---
+  const card2 = el("div", { class: "card" });
+  card2.appendChild(el("h2", { text: "2. 결과 붙여넣기" }));
+  card2.appendChild(el("p", { class: "hint", style: "margin:6px 0 10px", text: "Claude가 출력한 JSON 코드블록을 복사해 아래에 붙여넣으세요. 출력이 잘렸다면 조각마다 [추가]를 눌러 쌓은 뒤 저장하면 됩니다." }));
+
+  const ta = el("textarea", {
+    placeholder: "여기에 Claude 출력 붙여넣기",
+    oninput: e => { state.draft = e.target.value; }
+  });
+  ta.value = state.draft;
+  card2.appendChild(ta);
+
+  const statusRow = el("div", { style: "display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap" });
+  const chunkBadge = el("span", { class: "chunk-count" });
+  function syncChunkBadge() {
+    chunkBadge.textContent = `조각 ${state.chunks.length}개`;
+    chunkBadge.style.display = state.chunks.length ? "" : "none";
+    clearChunksBtn.style.display = state.chunks.length ? "" : "none";
+  }
+  const clearChunksBtn = el("button", {
+    class: "btn btn-ghost btn-sm", text: "조각 비우기",
+    onclick: () => { state.chunks = []; state.parseResult = null; syncChunkBadge(); renderParseArea(); toast("조각을 비웠습니다"); }
+  });
+  statusRow.appendChild(chunkBadge);
+  statusRow.appendChild(clearChunksBtn);
+  card2.appendChild(statusRow);
+
+  // 저장할 폴더 고르기
+  card2.appendChild(el("label", { class: "field-label", text: "저장할 폴더" }));
+  const nfRow = el("div", { class: "sort-row" });
+  card2.appendChild(nfRow);
+
+  function renderNewFolderPick() {
+    nfRow.textContent = "";
+    const mk = (label, value) => el("button", {
+      class: "sort-chip" + (state.newFolder === value ? " on" : ""),
+      text: label,
+      onclick: () => { state.newFolder = value; renderNewFolderPick(); renderParseArea(); }
+    });
+    nfRow.appendChild(mk("미분류", ""));
+    for (const f of allFolders()) nfRow.appendChild(mk("\u{1F4C1} " + f, f));
+  }
+
+  const nfNewRow = el("div", { class: "folder-new-row" });
+  const nfInput = el("input", { type: "text", placeholder: "새 폴더 이름" });
+  nfNewRow.appendChild(nfInput);
+  const nfAdd = el("button", {
+    class: "btn btn-ghost btn-sm", text: "폴더 추가",
+    onclick: () => {
+      const v = nfInput.value.trim();
+      if (!v) { toast("폴더 이름을 입력하세요"); nfInput.focus(); return; }
+      addFolder(v);
+      state.newFolder = v;
+      nfInput.value = "";
+      renderNewFolderPick();
+      renderParseArea();
+      toast("'" + v + "' 폴더 추가됨");
+    }
+  });
+  nfNewRow.appendChild(nfAdd);
+  nfInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); nfAdd.click(); } });
+  card2.appendChild(nfNewRow);
+  renderNewFolderPick();
+
+  const btnRow = el("div", { class: "row-gap", style: "margin-top:10px" });
+  btnRow.appendChild(el("button", {
+    class: "btn btn-ghost", text: "추가",
+    onclick: () => {
+      const v = ta.value.trim();
+      if (!v) { toast("붙여넣은 내용이 없습니다"); return; }
+      state.chunks.push(v);
+      state.draft = "";
+      ta.value = "";
+      syncChunkBadge();
+      toast(`조각 ${state.chunks.length}개 추가됨`);
+    }
+  }));
+  btnRow.appendChild(el("button", {
+    class: "btn btn-primary", text: "저장", style: "width:auto",
+    onclick: () => {
+      const all = [...state.chunks];
+      const v = ta.value.trim();
+      if (v) { all.push(v); state.chunks.push(v); state.draft = ""; ta.value = ""; syncChunkBadge(); }
+      if (all.length === 0) { toast("붙여넣은 내용이 없습니다"); return; }
+      state.parseResult = parseChunks(all);
+      renderParseArea();
+    }
+  }));
+  card2.appendChild(btnRow);
+
+  const parseArea = el("div");
+  card2.appendChild(parseArea);
+
+  function renderParseArea() {
+    parseArea.textContent = "";
+    const r = state.parseResult;
+    if (!r) return;
+
+    if (r.incomplete) {
+      parseArea.appendChild(el("div", { class: "parse-error", text: "출력이 중간에 잘린 것 같습니다 (JSON 배열이 ] 로 끝나지 않음). Claude에게 \"이어서\"라고 요청한 뒤, 이어지는 부분을 붙여넣고 [추가]를 누르고 다시 [저장]하세요." }));
+      return;
+    }
+    if (r.error) {
+      parseArea.appendChild(el("div", { class: "parse-error", text: "파싱 실패: " + r.error }));
+      parseArea.appendChild(el("button", {
+        class: "btn btn-ghost", text: "재요청 문구 복사", style: "margin-top:10px;width:100%",
+        onclick: () => copyText(RETRY_PHRASE, "재요청 문구 복사됨")
+      }));
+      return;
+    }
+
+    let msg = `${r.total}쪽 파싱됨, 그중 ${r.withNotes}쪽 설명 있음`;
+    if (r.skipped) msg += ` (형식이 잘못된 항목 ${r.skipped}개는 제외)`;
+    msg += state.newFolder ? ` \u00b7 '${state.newFolder}' 폴더에 저장됩니다` : " \u00b7 미분류로 저장됩니다";
+    parseArea.appendChild(el("div", { class: "parse-ok", text: msg }));
+
+    parseArea.appendChild(el("button", {
+      class: "btn btn-primary", text: "저장 확정", style: "margin-top:10px",
+      onclick: () => {
+        const topic = state.topic.trim();
+        if (!topic) { toast("강의 주제를 입력하세요"); topicInput.focus(); window.scrollTo(0, 0); return; }
+        const lec = {
+          id: crypto.randomUUID(),
+          topic,
+          createdAt: new Date().toISOString(),
+          pages: r.pages
+        };
+        if (state.newFolder) lec.folder = state.newFolder;
+        lectures.push(lec);
+        if (persistLectures()) {
+          toast("저장됨");
+          go("lecture", lec.id);
+        } else {
+          lectures.pop();
+        }
+      }
+    }));
+  }
+
+  syncChunkBadge();
+  renderParseArea();
+  root.appendChild(card2);
+}
+
+/* ============================================================
+   화면: 강의 열람
+   ============================================================ */
+function renderLecture(root) {
+  const lec = lectures.find(l => l.id === state.lectureId);
+  if (!lec) { go("home"); return; }
+
+  root.appendChild(el("button", { class: "back-link", text: "‹ 목록으로", onclick: () => go("home") }));
+  root.appendChild(el("h1", { text: lec.topic || "(제목 없음)" }));
+  const s = lectureStats(lec);
+  root.appendChild(el("p", { class: "hint", style: "margin:4px 0 14px", text: `${fmtDate(lec.createdAt)} · 전체 ${s.total}쪽 중 ${s.withNotes}쪽 설명 있음` }));
+
+  const actionRow = el("div", { class: "row-gap", style: "margin-bottom:16px" });
+  actionRow.appendChild(el("button", {
+    class: "btn btn-ghost", text: "편집",
+    onclick: () => editLecture(lec)
+  }));
+  actionRow.appendChild(el("button", {
+    class: "btn btn-ghost", text: "노트 내려받기",
+    onclick: () => {
+      downloadFile(safeFileName(lec.topic) + ".md", lectureToMarkdown(lec), "text/markdown");
+      toast("Markdown 파일을 내려받았습니다");
+    }
+  }));
+  actionRow.appendChild(el("button", {
+    class: "btn btn-danger", text: "강의 삭제",
+    onclick: () => {
+      if (!confirm(`"${lec.topic}" 강의를 삭제할까요? 되돌릴 수 없습니다.`)) return;
+      lectures = lectures.filter(l => l.id !== lec.id);
+      if (persistLectures()) { toast("삭제됨"); go("home"); }
+    }
+  }));
+  root.appendChild(actionRow);
+
+  for (const p of lec.pages) {
+    const hasContent = (p.notes && p.notes.length) || (p.extra && p.extra.length);
+
+    if (!hasContent) {
+      root.appendChild(el("div", { class: "page-empty", text: `p.${p.page} ${p.title || ""} · 설명 없음`.replace("  ", " ") }));
+      continue;
+    }
+
+    const card = el("div", { class: "card page-card" });
+    const body = el("div", { class: "page-body" });
+    const chev = el("span", { class: "chev", text: state.collapsed.has(p.page) ? "▸" : "▾" });
+
+    const head = el("div", {
+      class: "page-head",
+      onclick: () => {
+        if (state.collapsed.has(p.page)) state.collapsed.delete(p.page);
+        else state.collapsed.add(p.page);
+        const closed = state.collapsed.has(p.page);
+        body.style.display = closed ? "none" : "";
+        chev.textContent = closed ? "▸" : "▾";
+      }
+    },
+      el("span", { class: "badge", text: "p." + p.page }),
+      el("span", { class: "title", text: p.title || "" }),
+      chev
+    );
+    card.appendChild(head);
+
+    for (const n of p.notes || []) {
+      const cls = n.label === "emphasis" ? "note emphasis" : n.label === "excluded" ? "note excluded" : "note";
+      const prefix = n.label === "emphasis" ? "🟡 " : n.label === "excluded" ? "⚪ " : "";
+      body.appendChild(el("div", { class: cls, text: prefix + n.text }));
+    }
+
+    if (p.extra && p.extra.length) {
+      const box = el("div", { class: "extra-box" }, el("div", { class: "extra-title", text: "강의안에 없는 추가 설명" }));
+      for (const x of p.extra) box.appendChild(el("div", { text: "· " + x }));
+      body.appendChild(box);
+    }
+
+    if (p.flow && p.flow.length) {
+      const row = el("div", { class: "flow-row" });
+      p.flow.forEach((f, i) => {
+        if (i > 0) row.appendChild(el("span", { class: "flow-arrow", text: "→" }));
+        row.appendChild(el("span", { class: "flow-chip", text: f }));
+      });
+      body.appendChild(row);
+    }
+
+    if (state.collapsed.has(p.page)) body.style.display = "none";
+    card.appendChild(body);
+    root.appendChild(card);
+  }
+}
+
+/* ============================================================
+   렌더 루트
+   ============================================================ */
+function render() {
+  const root = document.getElementById("app");
+  root.textContent = "";
+  if (state.view === "home") renderHome(root);
+  else if (state.view === "new") renderNew(root);
+  else if (state.view === "lecture") renderLecture(root);
+}
+
+render();
+restoreDeviceHandle();
+</script>
+</body>
+</html>
