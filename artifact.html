@@ -171,6 +171,7 @@
   .link-btn.danger { color: var(--danger); }
   .folder-new-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
   .folder-new-row input { flex: 1; min-width: 0; }
+  .folder-new-row .btn { flex-shrink: 0; }
   /* 모달 안의 .btn 은 전체 너비라 이 줄에서만 되돌린다 (.modal .btn 보다 구체적이어야 함) */
   .modal .folder-new-row .btn { width: auto; flex-shrink: 0; margin-bottom: 0; }
 
@@ -354,7 +355,9 @@ async function initStore() {
     }
   } catch (e) { /* 폴더 없이 시작 */ }
   try {
-    const s = await idbGet(SORT_KEY);
+    let s = null;
+    try { s = localStorage.getItem(SORT_KEY); } catch (e) { /* 무시 */ }
+    if (!s) s = await idbGet(SORT_KEY);
     if (s && SORTS.some(x => x.key === s)) state.sort = s;
   } catch (e) { /* 기본 정렬 유지 */ }
   render();
@@ -783,17 +786,21 @@ const state = {
   parseResult: null,
   collapsed: new Set(),
   folder: null,          // 목록 폴더 필터 (null=전체, ""=미분류)
+  newFolder: "",         // 새 강의를 저장할 폴더 ("" = 미분류)
   sort: "recent"         // 목록 정렬 기준 (initStore에서 저장값으로 덮어씀)
 };
 
 const SORTS = [
   { key: "recent", label: "최신순", cmp: (a, b) => (b.createdAt || "").localeCompare(a.createdAt || "") },
   { key: "oldest", label: "오래된순", cmp: (a, b) => (a.createdAt || "").localeCompare(b.createdAt || "") },
-  { key: "title", label: "가나다순", cmp: (a, b) => (a.topic || "").localeCompare(b.topic || "", "ko") },
+  { key: "title", label: "가나다순", cmp: (a, b) => (a.topic || "").localeCompare(b.topic || "", "ko", { numeric: true, sensitivity: "base" }) },
   { key: "notes", label: "설명 많은순", cmp: (a, b) => lectureStats(b).withNotes - lectureStats(a).withNotes }
 ];
 
+// 정렬 기준은 가벼운 화면 설정이라 동기 저장(localStorage)을 먼저 쓴다.
+// IndexedDB 쓰기는 비동기라 바로 새로고침하면 유실될 수 있어 보조로만 남긴다.
 function saveSort(key) {
+  try { localStorage.setItem(SORT_KEY, key); } catch (e) { /* 무시 */ }
   idbSet(SORT_KEY, key).catch(() => {});
 }
 
@@ -804,6 +811,7 @@ function go(view, id) {
     state.topic = "";
     state.correct = false;
     state.script = "";
+    state.newFolder = state.folder || "";
     state.chunks = [];
     state.draft = "";
     state.parseResult = null;
@@ -1194,6 +1202,43 @@ function renderNew(root) {
   statusRow.appendChild(clearChunksBtn);
   card2.appendChild(statusRow);
 
+  // 저장할 폴더 고르기
+  card2.appendChild(el("label", { class: "field-label", text: "저장할 폴더" }));
+  const nfRow = el("div", { class: "sort-row" });
+  card2.appendChild(nfRow);
+
+  function renderNewFolderPick() {
+    nfRow.textContent = "";
+    const mk = (label, value) => el("button", {
+      class: "sort-chip" + (state.newFolder === value ? " on" : ""),
+      text: label,
+      onclick: () => { state.newFolder = value; renderNewFolderPick(); renderParseArea(); }
+    });
+    nfRow.appendChild(mk("미분류", ""));
+    for (const f of allFolders()) nfRow.appendChild(mk("\u{1F4C1} " + f, f));
+  }
+
+  const nfNewRow = el("div", { class: "folder-new-row" });
+  const nfInput = el("input", { type: "text", placeholder: "새 폴더 이름" });
+  nfNewRow.appendChild(nfInput);
+  const nfAdd = el("button", {
+    class: "btn btn-ghost btn-sm", text: "폴더 추가",
+    onclick: () => {
+      const v = nfInput.value.trim();
+      if (!v) { toast("폴더 이름을 입력하세요"); nfInput.focus(); return; }
+      addFolder(v);
+      state.newFolder = v;
+      nfInput.value = "";
+      renderNewFolderPick();
+      renderParseArea();
+      toast("'" + v + "' 폴더 추가됨");
+    }
+  });
+  nfNewRow.appendChild(nfAdd);
+  nfInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); nfAdd.click(); } });
+  card2.appendChild(nfNewRow);
+  renderNewFolderPick();
+
   const btnRow = el("div", { class: "row-gap", style: "margin-top:10px" });
   btnRow.appendChild(el("button", {
     class: "btn btn-ghost", text: "추가",
@@ -1243,7 +1288,7 @@ function renderNew(root) {
 
     let msg = `${r.total}쪽 파싱됨, 그중 ${r.withNotes}쪽 설명 있음`;
     if (r.skipped) msg += ` (형식이 잘못된 항목 ${r.skipped}개는 제외)`;
-    if (state.folder) msg += ` \u00b7 '${state.folder}' 폴더에 저장됩니다`;
+    msg += state.newFolder ? ` \u00b7 '${state.newFolder}' 폴더에 저장됩니다` : " \u00b7 미분류로 저장됩니다";
     parseArea.appendChild(el("div", { class: "parse-ok", text: msg }));
 
     parseArea.appendChild(el("button", {
@@ -1257,7 +1302,7 @@ function renderNew(root) {
           createdAt: new Date().toISOString(),
           pages: r.pages
         };
-        if (state.folder) lec.folder = state.folder;
+        if (state.newFolder) lec.folder = state.newFolder;
         lectures.push(lec);
         persistLectures();
         toast("저장됨");
