@@ -78,7 +78,7 @@
   .btn-sm { padding: 8px 12px; font-size: 13px; border-radius: 10px; }
   .btn-danger { background: #fff; color: var(--danger); border: 1px solid var(--border); }
   .btn:disabled { opacity: .4; cursor: default; }
-  input[type="text"], textarea {
+  input[type="text"], input[type="password"], textarea {
     width: 100%;
     border: 1px solid var(--border);
     border-radius: 14px;
@@ -88,7 +88,7 @@
     background: #fff;
     color: var(--text);
   }
-  input[type="text"]:focus, textarea:focus {
+  input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
     outline: 2px solid var(--blue);
     outline-offset: -1px;
   }
@@ -373,19 +373,25 @@
     padding: 4px 0;
     margin-bottom: 8px;
   }
-  .device-row {
+  /* 동기화 상태 줄 */
+  .sync-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
     background: var(--card);
     border-radius: 14px;
     padding: 10px 14px;
     margin-bottom: 12px;
     box-shadow: 0 1px 6px rgba(0,0,0,0.04);
   }
-  .device-row .txt { font-size: 13px; color: var(--text-sub); flex: 1; }
-  .device-row .txt b { color: var(--text); }
+  .sync-row .txt { font-size: 13px; color: var(--text-sub); flex: 1; min-width: 160px; }
+  .sync-row .txt b { color: var(--text); }
+  .sync-row .txt b.good { color: #1B7B4E; }
+  .sync-row .txt b.bad { color: var(--danger); }
+  .steps { margin: 0 0 14px 18px; font-size: 14px; color: var(--text-sub); }
+  .steps li { margin-bottom: 6px; }
+  .modal a.btn { text-decoration: none; }
   .row-gap { display: flex; gap: 8px; }
   .row-gap .btn { flex: 1; }
 </style>
@@ -430,6 +436,8 @@ let folders = loadFolders();
 
 function persistFolders() {
   try { localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders)); } catch (e) { /* 무시 */ }
+  touchFolders();
+  scheduleSync();
 }
 
 function persistLectures() {
@@ -439,7 +447,7 @@ function persistLectures() {
     alert("저장 공간이 가득 찼습니다. [백업]으로 데이터를 내려받은 뒤 오래된 강의를 삭제하세요.");
     return false;
   }
-  writeDeviceFile(); // 기기 파일이 연결돼 있으면 자동 저장 (미지원/미연결 시 무시)
+  scheduleSync();
   return true;
 }
 
@@ -449,87 +457,385 @@ if (navigator.storage && navigator.storage.persist) {
 }
 
 /* ============================================================
-   기기 파일 자동 저장 (File System Access API — 지원 브라우저 한정)
+   기기 간 동기화 (깃허브 비공개 Gist)
+   ------------------------------------------------------------
+   Gist 하나를 여러 기기가 함께 읽고 쓴다. 합칠 때는 강의 id 기준으로
+   updatedAt이 더 최근인 쪽을 남기므로 어느 기기의 노트도 지워지지 않는다.
+   삭제만 따로 기록(tombstone)해 다른 기기에도 전달한다.
+   토큰은 이 기기의 브라우저에만 저장되고 백업 파일에는 들어가지 않는다.
    ============================================================ */
-const supportsDeviceFile = "showSaveFilePicker" in window;
-let deviceFileHandle = null;
-let deviceStatus = supportsDeviceFile ? "연결 안 됨" : "";
+const TOKEN_KEY = "sync_token_v1";
+const GIST_KEY = "sync_gist_v1";
+const TOMB_KEY = "lectures_tombstones_v1";
+const FOLDERS_AT_KEY = "lectures_folders_at_v1";
+const MANIFEST_FILE = "lecture-organizer.json";
+const NOTE_PREFIX = "note-";
+const TOKEN_URL = "https://github.com/settings/tokens/new?scopes=gist&description=" +
+  encodeURIComponent("강의 복습 노트 동기화");
 
-function idbOpen() {
-  return new Promise((res, rej) => {
-    const r = indexedDB.open("lecture-organizer-kv", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("kv");
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  });
-}
-async function idbSet(key, val) {
-  const db = await idbOpen();
-  return new Promise((res, rej) => {
-    const tx = db.transaction("kv", "readwrite");
-    tx.objectStore("kv").put(val, key);
-    tx.oncomplete = () => res();
-    tx.onerror = () => rej(tx.error);
-  });
-}
-async function idbGet(key) {
-  const db = await idbOpen();
-  return new Promise((res, rej) => {
-    const tx = db.transaction("kv");
-    const rq = tx.objectStore("kv").get(key);
-    rq.onsuccess = () => res(rq.result);
-    rq.onerror = () => rej(rq.error);
-  });
-}
-
-async function restoreDeviceHandle() {
-  if (!supportsDeviceFile) return;
+function lsGet(k, fallback) {
   try {
-    const h = await idbGet("deviceFileHandle");
-    if (h) {
-      deviceFileHandle = h;
-      const perm = await h.queryPermission({ mode: "readwrite" });
-      deviceStatus = perm === "granted" ? "연결됨" : "연결됨 (저장 시 권한 확인)";
-      if (state.view === "home") render();
-    }
+    const v = localStorage.getItem(k);
+    return v === null ? fallback : v;
+  } catch (e) {
+    return fallback;
+  }
+}
+function lsSet(k, v) {
+  try {
+    if (v === null) localStorage.removeItem(k);
+    else localStorage.setItem(k, v);
   } catch (e) { /* 무시 */ }
 }
 
-async function connectDeviceFile() {
+function loadTombstones() {
   try {
-    deviceFileHandle = await window.showSaveFilePicker({
-      suggestedName: "강의노트-백업.json",
-      types: [{ description: "JSON", accept: { "application/json": [".json"] } }]
-    });
-    await idbSet("deviceFileHandle", deviceFileHandle).catch(() => {});
-    await writeDeviceFile(true);
-    toast("기기 파일에 연결됐습니다. 이후 자동으로 저장됩니다.");
-    render();
+    const o = JSON.parse(localStorage.getItem(TOMB_KEY) || "{}");
+    return o && typeof o === "object" && !Array.isArray(o) ? o : {};
   } catch (e) {
-    if (e && e.name !== "AbortError") toast("파일 연결에 실패했습니다.");
+    return {};
+  }
+}
+let tombstones = loadTombstones();
+function persistTombstones() { lsSet(TOMB_KEY, JSON.stringify(tombstones)); }
+
+function nowIso() { return new Date().toISOString(); }
+function lecUpdated(l) { return String(l.updatedAt || l.createdAt || ""); }
+function touchLecture(l) { l.updatedAt = nowIso(); }
+function foldersUpdatedAt() { return lsGet(FOLDERS_AT_KEY, ""); }
+function touchFolders() { lsSet(FOLDERS_AT_KEY, nowIso()); }
+
+const sync = {
+  token: lsGet(TOKEN_KEY, ""),
+  gistId: lsGet(GIST_KEY, ""),
+  status: "off",      // off | syncing | ok | error
+  message: "",
+  at: 0,
+  busy: false,
+  pending: false,
+  timer: null,
+  lastRun: 0
+};
+
+function syncConfigured() { return !!(sync.token && sync.gistId); }
+
+let syncRowHost = null;
+function setSyncStatus(status, message) {
+  sync.status = status;
+  sync.message = message || "";
+  if (status === "ok") sync.at = Date.now();
+  renderSyncRow();
+}
+
+/* ---------- 깃허브 API ---------- */
+async function gh(path, opts) {
+  let res;
+  try {
+    res = await fetch("https://api.github.com" + path, Object.assign({}, opts, {
+      headers: Object.assign({
+        "Accept": "application/vnd.github+json",
+        "Authorization": "Bearer " + sync.token,
+        "X-GitHub-Api-Version": "2022-11-28"
+      }, (opts && opts.headers) || {})
+    }));
+  } catch (e) {
+    throw new Error("인터넷에 연결되지 않았습니다.");
+  }
+  if (res.status === 401) throw new Error("토큰이 올바르지 않습니다. 새로 발급해 주세요.");
+  if (res.status === 403) throw new Error("깃허브가 요청을 거부했습니다 (권한 또는 요청 한도).");
+  if (res.status === 404) throw new Error("동기화 저장소를 찾지 못했습니다. 설정에서 다시 연결하세요.");
+  if (!res.ok) throw new Error("깃허브 오류 " + res.status);
+  return res.status === 204 ? null : res.json();
+}
+
+function noteFile(id) {
+  return NOTE_PREFIX + String(id).replace(/[^A-Za-z0-9_.-]/g, "_") + ".json";
+}
+
+async function fileText(f) {
+  if (!f.truncated) return f.content || "";
+  const res = await fetch(f.raw_url);
+  if (!res.ok) throw new Error("큰 노트를 내려받지 못했습니다.");
+  return res.text();
+}
+
+function buildManifest() {
+  const index = {};
+  for (const l of lectures) {
+    const s = lectureStats(l);
+    index[l.id] = {
+      topic: l.topic || "",
+      createdAt: l.createdAt || "",
+      updatedAt: lecUpdated(l),
+      folder: l.folder || "",
+      total: s.total,
+      withNotes: s.withNotes
+    };
+  }
+  return {
+    app: "lecture-organizer",
+    version: 3,
+    updatedAt: nowIso(),
+    folders: folders,
+    foldersUpdatedAt: foldersUpdatedAt(),
+    deleted: tombstones,
+    index
+  };
+}
+
+async function findGistId() {
+  const list = await gh("/gists?per_page=100");
+  const hit = (list || []).find(g => g && g.files && g.files[MANIFEST_FILE]);
+  return hit ? hit.id : "";
+}
+
+async function createGist() {
+  const g = await gh("/gists", {
+    method: "POST",
+    body: JSON.stringify({
+      description: "강의 복습 노트 동기화 데이터 (앱이 자동으로 만듭니다)",
+      public: false,
+      files: { [MANIFEST_FILE]: { content: JSON.stringify(buildManifest(), null, 1) } }
+    })
+  });
+  return g.id;
+}
+
+async function fetchRemote() {
+  const g = await gh("/gists/" + sync.gistId);
+  const files = (g && g.files) || {};
+  let manifest = null;
+  const notes = new Map();
+  if (files[MANIFEST_FILE]) {
+    try { manifest = JSON.parse(await fileText(files[MANIFEST_FILE])); } catch (e) { manifest = null; }
+  }
+  for (const name of Object.keys(files)) {
+    if (!name.startsWith(NOTE_PREFIX) || !name.endsWith(".json")) continue;
+    let obj = null;
+    try { obj = JSON.parse(await fileText(files[name])); } catch (e) { obj = null; }
+    if (obj && obj.id && Array.isArray(obj.pages)) notes.set(obj.id, obj);
+  }
+  return { manifest, notes };
+}
+
+/* ---------- 합치기 ---------- */
+function mergeRemote(remote) {
+  const rm = remote.manifest || {};
+  const before = JSON.stringify([
+    lectures.map(l => [l.id, lecUpdated(l)]).sort(),
+    folders,
+    tombstones
+  ]);
+
+  // 삭제 기록은 더 최근 시각을 남긴다
+  const remoteDeleted = rm.deleted && typeof rm.deleted === "object" && !Array.isArray(rm.deleted) ? rm.deleted : {};
+  const deleted = Object.assign({}, remoteDeleted);
+  for (const id of Object.keys(tombstones)) {
+    if (!deleted[id] || String(tombstones[id]) > String(deleted[id])) deleted[id] = tombstones[id];
+  }
+
+  // 같은 강의는 updatedAt이 더 최근인 쪽, 한쪽에만 있으면 그대로 남긴다
+  const byId = new Map();
+  for (const l of remote.notes.values()) byId.set(l.id, l);
+  for (const l of lectures) {
+    const r = byId.get(l.id);
+    if (!r || lecUpdated(l) >= lecUpdated(r)) byId.set(l.id, l);
+  }
+
+  // 삭제 반영 — 삭제한 시각보다 나중에 고친 강의는 되살린다
+  for (const id of Object.keys(deleted)) {
+    const l = byId.get(id);
+    if (l && lecUpdated(l) > String(deleted[id])) delete deleted[id];
+    else byId.delete(id);
+  }
+
+  const mergedLectures = [...byId.values()];
+
+  // 폴더 목록은 최근에 바뀐 쪽을 따르되, 실제로 쓰이는 폴더는 반드시 남긴다
+  const remoteAt = String(rm.foldersUpdatedAt || "");
+  const localAt = String(foldersUpdatedAt());
+  const base = remoteAt > localAt && Array.isArray(rm.folders) ? rm.folders : folders;
+  const mergedFolders = base.filter(f => typeof f === "string" && f.trim());
+  for (const l of mergedLectures) {
+    const f = (l.folder || "").trim();
+    if (f && !mergedFolders.includes(f)) mergedFolders.push(f);
+  }
+
+  lectures = mergedLectures;
+  folders = mergedFolders;
+  tombstones = deleted;
+  if (remoteAt > localAt) lsSet(FOLDERS_AT_KEY, remoteAt);
+
+  const after = JSON.stringify([
+    lectures.map(l => [l.id, lecUpdated(l)]).sort(),
+    folders,
+    tombstones
+  ]);
+  return before !== after;
+}
+
+// 합친 결과는 동기화를 다시 예약하지 않고 조용히 저장한다
+function persistMerged() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(lectures)); } catch (e) { /* 무시 */ }
+  try { localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders)); } catch (e) { /* 무시 */ }
+  persistTombstones();
+}
+
+async function pushRemote(remote) {
+  const files = {};
+  const remoteNotes = remote ? remote.notes : new Map();
+  for (const l of lectures) {
+    const body = JSON.stringify(l);
+    const r = remoteNotes.get(l.id);
+    if (!r || JSON.stringify(r) !== body) files[noteFile(l.id)] = { content: body };
+  }
+  for (const id of remoteNotes.keys()) {
+    if (!lectures.some(l => l.id === id)) files[noteFile(id)] = null;
+  }
+  files[MANIFEST_FILE] = { content: JSON.stringify(buildManifest(), null, 1) };
+  await gh("/gists/" + sync.gistId, { method: "PATCH", body: JSON.stringify({ files }) });
+}
+
+async function runSync() {
+  if (!syncConfigured()) return;
+  if (sync.busy) { sync.pending = true; return; }
+  sync.busy = true;
+  clearTimeout(sync.timer);
+  setSyncStatus("syncing", "");
+  try {
+    const remote = await fetchRemote();
+    const changed = mergeRemote(remote);
+    if (changed) {
+      persistMerged();
+      // 새 강의를 입력하는 중에는 화면을 다시 그리지 않는다 (입력 내용 보호)
+      if (state.view !== "new") render();
+    }
+    await pushRemote(remote);
+    sync.lastRun = Date.now();
+    setSyncStatus("ok", "");
+  } catch (e) {
+    setSyncStatus("error", (e && e.message) || "동기화에 실패했습니다.");
+  } finally {
+    sync.busy = false;
+    if (sync.pending) { sync.pending = false; scheduleSync(500); }
   }
 }
 
-async function writeDeviceFile(fromGesture) {
-  if (!deviceFileHandle) return;
-  try {
-    let perm = await deviceFileHandle.queryPermission({ mode: "readwrite" });
-    if (perm !== "granted" && fromGesture) {
-      perm = await deviceFileHandle.requestPermission({ mode: "readwrite" });
-    }
-    if (perm !== "granted") {
-      deviceStatus = "권한 필요 — [기기 파일 연결]을 다시 누르세요";
-      return;
-    }
-    const w = await deviceFileHandle.createWritable();
-    await w.write(JSON.stringify(backupPayload(), null, 2));
-    await w.close();
-    deviceStatus = "기기 파일 저장됨 · " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
-    if (state.view === "home") render();
-  } catch (e) {
-    deviceStatus = "기기 파일 저장 실패";
-  }
+function scheduleSync(delay) {
+  if (!syncConfigured()) return;
+  clearTimeout(sync.timer);
+  sync.timer = setTimeout(runSync, delay === undefined ? 1500 : delay);
 }
+
+/* ---------- 화면 ---------- */
+function fmtAgo(ts) {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return "방금 전";
+  if (s < 3600) return Math.floor(s / 60) + "분 전";
+  return Math.floor(s / 3600) + "시간 전";
+}
+
+function syncRowNode() {
+  const row = el("div", { class: "sync-row" });
+  const txt = el("div", { class: "txt" });
+  if (!syncConfigured()) {
+    txt.appendChild(el("b", { text: "동기화 꺼짐 " }));
+    txt.appendChild(document.createTextNode("노트가 이 기기에만 저장됩니다."));
+    row.appendChild(txt);
+    row.appendChild(el("button", { class: "btn btn-ghost btn-sm", text: "동기화 켜기", onclick: openSyncSetup }));
+  } else {
+    if (sync.status === "syncing") {
+      txt.appendChild(el("b", { text: "동기화 중…" }));
+    } else if (sync.status === "error") {
+      txt.appendChild(el("b", { class: "bad", text: "동기화 실패 " }));
+      txt.appendChild(document.createTextNode(sync.message));
+    } else {
+      txt.appendChild(el("b", { class: "good", text: "✓ 동기화됨 " }));
+      txt.appendChild(document.createTextNode(sync.at ? fmtAgo(sync.at) : "연결됨"));
+    }
+    row.appendChild(txt);
+    row.appendChild(el("button", { class: "btn btn-ghost btn-sm", text: "지금", onclick: () => runSync() }));
+    row.appendChild(el("button", { class: "btn btn-ghost btn-sm", text: "설정", onclick: openSyncSetup }));
+  }
+  return row;
+}
+
+function renderSyncRow() {
+  if (!syncRowHost || !syncRowHost.isConnected) return;
+  syncRowHost.textContent = "";
+  syncRowHost.appendChild(syncRowNode());
+}
+
+function openSyncSetup() {
+  showModal(box => {
+    box.appendChild(el("h2", { text: "기기 간 동기화" }));
+    box.appendChild(el("p", { text: "깃허브의 비공개 Gist에 노트를 보관해 아이폰·노트북 어디서 열어도 같은 노트를 봅니다. 기기마다 토큰을 한 번씩만 넣으면 됩니다." }));
+
+    const steps = el("ol", { class: "steps" });
+    steps.appendChild(el("li", { text: "아래 [깃허브에서 토큰 만들기]를 누릅니다. gist 권한만 체크된 화면이 열립니다." }));
+    steps.appendChild(el("li", { text: "맨 아래 Generate token을 누르고, 나온 토큰(ghp_로 시작)을 복사합니다." }));
+    steps.appendChild(el("li", { text: "복사한 토큰을 아래에 붙여넣고 [연결]을 누릅니다." }));
+    box.appendChild(steps);
+
+    box.appendChild(el("a", {
+      class: "btn btn-ghost", href: TOKEN_URL, target: "_blank", rel: "noopener",
+      text: "깃허브에서 토큰 만들기", style: "margin-bottom:10px"
+    }));
+
+    const input = el("input", { type: "password", placeholder: "ghp_ 로 시작하는 토큰", autocomplete: "off" });
+    box.appendChild(input);
+    box.appendChild(el("p", { class: "hint", text: "토큰은 이 기기의 브라우저에만 저장되고, 백업 파일에도 들어가지 않습니다." }));
+
+    const connect = async () => {
+      const v = input.value.trim();
+      if (!v) { toast("토큰을 붙여넣으세요"); input.focus(); return; }
+      closeModal();
+      sync.token = v;
+      lsSet(TOKEN_KEY, v);
+      setSyncStatus("syncing", "");
+      try {
+        let id = await findGistId();
+        if (!id) id = await createGist();
+        sync.gistId = id;
+        lsSet(GIST_KEY, id);
+        await runSync();
+        if (sync.status === "ok") toast("동기화를 켰습니다");
+      } catch (e) {
+        sync.token = "";
+        lsSet(TOKEN_KEY, null);
+        setSyncStatus("off", "");
+        toast((e && e.message) || "연결에 실패했습니다");
+      }
+    };
+    input.addEventListener("keydown", e => { if (e.key === "Enter") connect(); });
+    box.appendChild(el("button", { class: "btn btn-primary", text: "연결", style: "margin-top:12px", onclick: connect }));
+
+    if (syncConfigured()) {
+      box.appendChild(el("button", {
+        class: "btn btn-danger", text: "이 기기에서 동기화 끄기",
+        onclick: () => {
+          closeModal();
+          sync.token = "";
+          sync.gistId = "";
+          lsSet(TOKEN_KEY, null);
+          lsSet(GIST_KEY, null);
+          setSyncStatus("off", "");
+          toast("동기화를 껐습니다 (노트는 그대로 있습니다)");
+        }
+      }));
+    }
+    box.appendChild(el("button", { class: "btn btn-ghost", text: "닫기", onclick: closeModal }));
+    setTimeout(() => input.focus(), 50);
+  });
+}
+
+// 다른 기기에서 고친 내용을 앱으로 돌아올 때 받아온다
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  if (!syncConfigured()) return;
+  if (Date.now() - sync.lastRun < 30000) return;
+  runSync();
+});
 
 /* ============================================================
    프롬프트 템플릿
@@ -872,6 +1178,9 @@ function applyRestore(incoming, overwrite, incomingFolders) {
   closeModal();
   for (const f of (incomingFolders || [])) if (!folders.includes(f)) folders.push(f);
   if (overwrite) {
+    const keep = new Set(incoming.map(l => l.id));
+    for (const l of lectures) if (!keep.has(l.id)) tombstones[l.id] = nowIso();
+    persistTombstones();
     lectures = incoming;
     folders = (incomingFolders || []).slice();
   } else {
@@ -989,21 +1298,10 @@ function renderHome(root) {
   );
   root.appendChild(top);
 
-  // 기기 저장 상태 줄
-  if (supportsDeviceFile) {
-    const row = el("div", { class: "device-row" },
-      el("div", { class: "txt" },
-        el("b", { text: "기기 저장 " }),
-        deviceStatus || "연결 안 됨"
-      ),
-      el("button", { class: "btn btn-ghost btn-sm", text: "기기 파일 연결", onclick: connectDeviceFile })
-    );
-    root.appendChild(row);
-  } else {
-    root.appendChild(el("div", { class: "device-row" },
-      el("div", { class: "txt", text: "이 브라우저(iPhone Safari 포함)는 파일 자동 저장을 지원하지 않습니다. 데이터는 브라우저에 저장되므로, [백업] 버튼으로 기기의 파일 앱에 주기적으로 저장해 두세요." })
-    ));
-  }
+  // 동기화 상태 줄
+  syncRowHost = el("div");
+  root.appendChild(syncRowHost);
+  renderSyncRow();
 
   const search = el("input", {
     type: "text",
@@ -1092,7 +1390,7 @@ function renderHome(root) {
         folders = folders.map(f => (f === name ? v : f));
         if (!folders.includes(v)) folders.push(v);
         persistFolders();
-        for (const l of lectures) if ((l.folder || "") === name) l.folder = v;
+        for (const l of lectures) if ((l.folder || "") === name) { l.folder = v; touchLecture(l); }
         persistLectures();
         state.folder = v;
         toast("폴더 이름을 바꿨습니다");
@@ -1117,7 +1415,7 @@ function renderHome(root) {
           closeModal();
           folders = folders.filter(f => f !== name);
           persistFolders();
-          for (const l of lectures) if ((l.folder || "") === name) delete l.folder;
+          for (const l of lectures) if ((l.folder || "") === name) { delete l.folder; touchLecture(l); }
           persistLectures();
           state.folder = null;
           toast("폴더를 삭제했습니다 (강의는 그대로 있습니다)");
@@ -1233,6 +1531,7 @@ function editLecture(lec, after) {
       closeModal();
       lec.topic = v;
       if (picked) lec.folder = picked; else delete lec.folder;
+      touchLecture(lec);
       persistLectures();
       toast("저장했습니다");
       if (after) after(); else render();
@@ -1464,10 +1763,12 @@ function renderNew(root) {
       onclick: () => {
         const topic = state.topic.trim();
         if (!topic) { toast("강의 주제를 입력하세요"); topicInput.focus(); window.scrollTo(0, 0); return; }
+        const createdAt = new Date().toISOString();
         const lec = {
           id: crypto.randomUUID(),
           topic,
-          createdAt: new Date().toISOString(),
+          createdAt,
+          updatedAt: createdAt,
           pages: r.pages
         };
         if (state.newFolder) lec.folder = state.newFolder;
@@ -1516,6 +1817,8 @@ function renderLecture(root) {
     onclick: () => {
       if (!confirm(`"${lec.topic}" 강의를 삭제할까요? 되돌릴 수 없습니다.`)) return;
       lectures = lectures.filter(l => l.id !== lec.id);
+      tombstones[lec.id] = nowIso();
+      persistTombstones();
       if (persistLectures()) { toast("삭제됨"); go("home"); }
     }
   }));
@@ -1588,7 +1891,7 @@ function render() {
 }
 
 render();
-restoreDeviceHandle();
+if (syncConfigured()) runSync();
 </script>
 </body>
 </html>
